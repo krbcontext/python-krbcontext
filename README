@@ -1,4 +1,4 @@
-krbcontext is used to put developer's action code
-within Kerberos context, like initializing credential
-cache with specific principal and customize credential
-cache file name.
+krbcontext do the initialization of credential cache (ticket file) in a
+kerberos-related context. It provides a context manager that allows
+developers to put codes, which needs kerberos environment, into a kerberos context.
+
