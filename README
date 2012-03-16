@@ -1,0 +1,4 @@
+krbcontext is used to put developer's action code
+within Kerberos context, like initializing credential
+cache with specific principal and customize credential
+cache file name.
