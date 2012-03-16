@@ -24,11 +24,11 @@ def init_ccache_as_regular_user(principal=None, ccache_file=None):
     Return the filename of newly initialized credential cache
     '''
 
-    if not os.isatty(sys.stdin):
+    if not sys.stdin.isatty():
         raise IOError('This is not running on console. So, you need to run kinit '
                       'with your principal manually before anything goes.')
 
-    cmd = 'kinit %(ccache_file) %(principal)s'
+    cmd = 'kinit %(ccache_file)s %(principal)s'
     args = {}
 
     if principal:
@@ -37,14 +37,16 @@ def init_ccache_as_regular_user(principal=None, ccache_file=None):
         args['principal'] = get_login()
     if ccache_file:
         args['ccache_file'] = ccache_file
+    else:
+        args['ccache_file'] = ''
 
     kinit_proc = subprocess.Popen(
-        cmd.split(),
-        stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        (cmd % args).split(),
+        stderr=subprocess.PIPE)
     stdout_data, stderr_data = kinit_proc.communicate()
 
     if kinit_proc.returncode > 0:
-        raise KRB5KinitError(stdout_data)
+        raise KRB5KinitError(stderr_data)
 
     if ccache_file:
         return ccache_file
@@ -75,10 +77,9 @@ def init_ccache_with_keytab(principal=None, keytab_file=None, ccache_file=None):
     return ccache_file
 
 @contextmanager
-def krbcontext(func, using_keytab=False, **kwargs):
+def krbcontext(using_keytab=False, **kwargs):
     '''A context manager for Kerberos-related actions
 
-    action: the method containing what to run in Kerberos context.
     using_keytab: specify to use Keytab file in Kerberos context if True,
                   or be as a regular user.
     kwargs: contains the necessary arguments used in kerberos context.
@@ -86,17 +87,18 @@ def krbcontext(func, using_keytab=False, **kwargs):
             When you want to use Keytab file, keytab_file must be included.
     '''
 
-    old_ccache = os.getenv('KRB5CCNAME')
+    env_name = 'KRB5CCNAME'
+    old_ccache = os.getenv(env_name)
     if using_keytab:
         ccache_file = init_ccache_with_keytab(**kwargs)
     else:
         ccache_file = init_ccache_as_regular_user(**kwargs)
-    os.environ['KRB5CCNAME'] = ccache_file
+    os.environ[env_name] = ccache_file
 
     try:
-        func()
+        yield
     finally:
         if old_ccache:
-            os.environ['KRB5CCNAME'] = old_ccache
+            os.environ[env_name] = old_ccache
         else:
-            del os.environ['KRB5CCNAME']
+            del os.environ[env_name]
