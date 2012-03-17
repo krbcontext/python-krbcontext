@@ -36,7 +36,7 @@ def init_ccache_as_regular_user(principal=None, ccache_file=None):
     else:
         args['principal'] = get_login()
     if ccache_file:
-        args['ccache_file'] = ccache_file
+        args['ccache_file'] = '-c %s' % ccache_file
     else:
         args['ccache_file'] = ''
 
@@ -55,7 +55,7 @@ def init_ccache_as_regular_user(principal=None, ccache_file=None):
         ccache = context.default_ccache()
         return ccache.name
 
-def init_ccache_with_keytab(principal=None, keytab_file=None, ccache_file=None):
+def init_ccache_with_keytab(principal, keytab_file=None, ccache_file=None):
     '''Initialize credential cache using keytab file
 
     Return the filename of newly initialized credential cache
@@ -74,7 +74,7 @@ def init_ccache_with_keytab(principal=None, keytab_file=None, ccache_file=None):
 
     ccache.init(princ)
     ccache.init_creds_keytab(principal=princ, keytab=keytab)
-    return ccache_file
+    return ccache.name
 
 @contextmanager
 def krbcontext(using_keytab=False, **kwargs):
