@@ -2,7 +2,7 @@
 Using krbcontext
 ================
 
-krbcontext do the initialization of credential cache (ticket file) in a
+krbcontext does the initialization of credential cache (ticket file) in a
 kerberos-related context. It provides a context manager that allows
 developers to put codes, which needs kerberos environment, into a kerberos context.
 
@@ -27,7 +27,7 @@ Arguments
 ---------
 
 using_keytab
-    Specify whether using the service Keytab to initiliaze the credential cache.
+    Specify whether using the service Keytab to initialize the credential cache.
     Default is False.
 
 kwargs
