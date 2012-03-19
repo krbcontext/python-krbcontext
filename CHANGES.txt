@@ -1,0 +1,16 @@
+krbcontext ChangeLog
+====================
+
+0.2 (2012-03-19)
+----------------
+
+- Add change log to project
+
+- Providing RPM distribution package
+
+0.1 (2012-03-19)
+----------------
+
+- Upload to PyPI
+
+- Add more information to setup.py after initialized import to github

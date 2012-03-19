@@ -20,6 +20,17 @@ There are several concept you must know before using krbcontext, principal of us
 and service, service Keytab file, and credential cache (ticket file). Therefore,
 the arguments passed to krbcontext are mapped to these concepts.
 
+Dependencies
+============
+
+krbcontext depends on python-krbV. This is a Python extension module for Kerberos 5.
+It is hosted in fedorahosted.org, you can follow this URL to get more details.
+https://fedorahosted.org/python-krbV/
+
+If you choose to install krbcontext using the RPM distribution, the dependency will
+be solved automatically. On the other hand, if easy_install or pip is used, it is
+necessary to run yum or build from source to install python-krbV first.
+
 Usage
 =====
 

@@ -7,10 +7,10 @@ def get_long_description():
 
 setup(
     name = 'krbcontext',
-    version = '0.1',
+    version = '0.2',
     description = 'A Kerberos context manager',
     long_description = get_long_description(),
-    keywords = ['krb', 'kerberos', 'context', 'principal', 'credential', 'ticket'],
+    keywords = ['krb', 'kerberos', 'context', 'principal', 'credential', 'ticket', 'rpm'],
     license = 'GPL',
     author = 'Chenxiong Qi',
     author_email = 'cqi@redhat.com',
