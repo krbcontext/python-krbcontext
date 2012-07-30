@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-from setuptools import setup, find_packages
+from distutils.core import setup
 
 def get_long_description():
     return open('README', 'r').read()
@@ -10,14 +10,15 @@ setup(
     version = '0.2',
     description = 'A Kerberos context manager',
     long_description = get_long_description(),
-    keywords = ['krb', 'kerberos', 'context', 'principal', 'credential', 'ticket', 'rpm'],
+    keywords = ['krb', 'kerberos', 'context',
+                'principal', 'credential', 'ticket',
+                'rpm'],
     license = 'GPL',
     author = 'Chenxiong Qi',
     author_email = 'cqi@redhat.com',
     url = 'https://github.com/tkdchen/python-krbcontext',
 
-    packages = find_packages('src'),
-    package_dir = { '': 'src', },
+    packages = [ 'krbcontext' ],
 
     classifiers = [
         'Development Status :: 5 - Production/Stable',
