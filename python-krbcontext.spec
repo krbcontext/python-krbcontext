@@ -1,0 +1,56 @@
+%define src_name krbcontext
+%define version 0.2
+%define release 2
+
+Summary: A Kerberos context manager
+Name: python-%{src_name}
+Version: %{version}
+Release: %{release}%{?dist}
+Source0: http://pypi.python.org/packages/source/k/krbcontext/%{src_name}-%{version}.tar.gz
+License: GPL
+Group: Development/Libraries
+Url: https://github.com/tkdchen/python-krbcontext
+BuildArch: noarch
+
+Requires: python-krbV
+
+%description
+krbcontext does the initialization of credential cache (ticket file) in a
+kerberos-related context. It provides a context manager that allows
+developers to put codes, which needs kerberos environment, into a kerberos context.
+
+One important thing is that you should configure /etc/krb5.conf correctly before
+doing anything with Kerberos.
+
+krbcontext will initialize the credential cache when be invoked each time.
+
+You can use krbcontext with a regular Kerberos user or a service Keytab file.
+When you work as a regular user, krbcontext prompts you to enter password
+of your Kerberos account. Whatever in which way, krbcontext accepts a set of
+default values and specified values.
+
+There are several concept you must know before using krbcontext, principal of user
+and service, service Keytab file, and credential cache (ticket file). Therefore,
+the arguments passed to krbcontext are mapped to these concepts.
+
+%prep
+%setup -n %{src_name}-%{version}
+
+%build
+%{__python} setup.py build
+
+%install
+%{__python} setup.py install -O1 --root=$RPM_BUILD_ROOT
+
+%clean
+rm -rf $RPM_BUILD_ROOT
+
+%files
+%defattr(-,root,root)
+%{python_sitelib}/krbcontext/*
+%{python_sitelib}/krbcontext-%{version}-*.egg-info
+
+%changelog
+
+* Mon Jul 30 2012 Chenxiong Qi <cqi@redhat.com> - 0.2-1
+- Initial package
