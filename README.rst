@@ -1,4 +1,3 @@
-================
 Using krbcontext
 ================
 
@@ -21,7 +20,7 @@ and service, service Keytab file, and credential cache (ticket file). Therefore,
 the arguments passed to krbcontext are mapped to these concepts.
 
 Dependencies
-============
+------------
 
 krbcontext depends on python-krbV. This is a Python extension module for Kerberos 5.
 It is hosted in fedorahosted.org, you can follow this URL to get more details.
@@ -32,10 +31,10 @@ be solved automatically. On the other hand, if easy_install or pip is used, it i
 necessary to run yum or build from source to install python-krbV first.
 
 Usage
-=====
+-----
 
 Arguments
----------
+~~~~~~~~~
 
 using_keytab
     Specify whether using the service Keytab to initialize the credential cache.
@@ -49,50 +48,60 @@ kwargs
     * ccache_file: absolute path of credential cache
 
 Basic
------
+~~~~~
 
 krbcontext can be used as a normal context manager simply.
 
-    >>> with krbcontext():
-    ...     # your code here
-    ...     pass
+::
+
+    with krbcontext():
+        # your code here
+        pass
 
 As a regular user
------------------
+~~~~~~~~~~~~~~~~~
 
-    >>> with krbcontext():
-    ...     pass
+::
+
+    with krbcontext():
+        pass
 
 This is the most simplest way. It uses default values. It gets current effective
 user name rather than login name, and initialize the default credential cache,
-/tmp/krb5cc_xxx, where xxx is the current user ID returned by os.getuid method.
+``/tmp/krb5cc_xxx``, where xxx is the current user ID returned by os.getuid method.
 
 Specifying custom values
 
-    >>> with krbcontext(principal='qcxhome@PYPI.PYTHON.COM',
-    ...                 ccache_file='/tmp/krb5cc_my'):
-    ...     pass
-    ...
-    >>> with krbcontext(principal='qcxhome',
-    ...                 ccache_file='/tmp/krb5cc_my'):
-    ...     pass
+::
+
+    with krbcontext(principal='qcxhome@PYPI.PYTHON.COM',
+                    ccache_file='/tmp/krb5cc_my'):
+        pass
+
+    with krbcontext(principal='qcxhome',
+                    ccache_file='/tmp/krb5cc_my'):
+        pass
 
 Using service Keytab
---------------------
+~~~~~~~~~~~~~~~~~~~~
 
-    >>> with krbcontext(using_keytab=True,
-    ...                 principal='HTTP/localhost@PYPI.PYTHON.COM'):
-    ...     pass
+::
+
+    with krbcontext(using_keytab=True,
+                    principal='HTTP/localhost@PYPI.PYTHON.COM'):
+        pass
 
 You can also use default values here except the using_keytab and principal.
-The default Keytab locates /etc/krb5.keytab, and default credential cache
-locates /tmp/krb5cc_xxx, like above.
+The default Keytab locates ``/etc/krb5.keytab``, and default credential cache
+locates ``/tmp/krb5cc_xxx``, like above.
 
-    >>> with krbcontext(using_keytab=True,
-    ...                 principal='HTTP/localhost@PYPI.PYTHON.COM'):
-    ...                 keytab_file='/etc/httpd/conf/httpd.keytab',
-    ...                 ccache_file='/tmp/krb5cc_pid_appname'):
-    ...     pass
+::
+
+    with krbcontext(using_keytab=True,
+                    principal='HTTP/localhost@PYPI.PYTHON.COM'):
+                    keytab_file='/etc/httpd/conf/httpd.keytab',
+                    ccache_file='/tmp/krb5cc_pid_appname'):
+        pass
 
 If you have another Keytab that is be elsewhere and a credential cache for
 special purpose, you may pass the keytab_file and ccache_file.
