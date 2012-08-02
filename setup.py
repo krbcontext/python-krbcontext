@@ -3,7 +3,7 @@
 from distutils.core import setup
 
 def get_long_description():
-    return open('README', 'r').read()
+    return open('README.txt', 'r').read()
 
 setup(
     name = 'krbcontext',
