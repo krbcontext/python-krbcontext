@@ -1,6 +1,13 @@
 krbcontext ChangeLog
 ====================
 
+0.2.1 (2012-08-02)
+------------------
+
+- Remove dependency to setuptools
+- Rewrite SPEC file for packaging RPM in Fedora and RHEL
+- Using VERSION.txt to share the version between setup.py and SPEC file
+
 0.2 (2012-03-19)
 ----------------
 
