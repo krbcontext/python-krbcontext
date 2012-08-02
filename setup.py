@@ -2,6 +2,10 @@
 
 from distutils.core import setup
 
+def get_version():
+    version = open('VERSION.txt', 'r').read()
+    return version.strip('\r\n')
+
 def get_long_description():
     return '''%s
 
@@ -11,7 +15,7 @@ def get_long_description():
 
 setup(
     name = 'krbcontext',
-    version = '0.2',
+    version = get_version(),
     description = 'A Kerberos context manager',
     long_description = get_long_description(),
     keywords = ['krb', 'kerberos', 'context',
