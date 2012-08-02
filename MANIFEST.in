@@ -1,2 +1,2 @@
-include *.txt *.py *.spec
+include *.txt *.rst *.py *.spec
 recursive-include krbcontext *.py
