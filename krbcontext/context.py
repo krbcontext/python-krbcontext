@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 
-__all__ = [ 'krbcontext', 'KRB5KinitError', ]
+__all__ = [ 'krbcontext', 'KRB5KInitError', ]
 
 import os, sys
 import pwd
@@ -10,7 +10,7 @@ import krbV
 
 from contextlib import contextmanager
 
-class KRB5KinitError(Exception):
+class KRB5KInitError(Exception):
     pass
 
 def get_login():
@@ -46,7 +46,7 @@ def init_ccache_as_regular_user(principal=None, ccache_file=None):
     stdout_data, stderr_data = kinit_proc.communicate()
 
     if kinit_proc.returncode > 0:
-        raise KRB5KinitError(stderr_data)
+        raise KRB5KInitError(stderr_data)
 
     if ccache_file:
         return ccache_file
