@@ -1,6 +1,16 @@
 ChangeLog
 =========
 
+0.3.0 (2013-01-10)
+------------------
+
+- Lazy initialization of credential cache.
+- Refactor all code
+- Rewrite all unittest
+- Improve SPEC
+- Improve configuration of Python package distribution
+- Update documentation
+
 0.2.1 (2012-08-02)
 ------------------
 

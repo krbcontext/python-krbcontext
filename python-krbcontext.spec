@@ -49,10 +49,18 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root)
-%{python_sitelib}/krbcontext/*
+%{python_sitelib}/krbcontext/
 %{python_sitelib}/krbcontext-%{version}-*.egg-info
 
 %changelog
+
+* Thu Jan 10 2013 Chenxiong Qi <cqi@redhat.com> - 0.3.0-1
+- Lazy initialization of credential cache.
+- Refactor all code
+- Rewrite all unittest
+- Improve SPEC
+- Improve configuration of Python package distribution
+- Update documentation
 
 * Mon Jul 30 2012 Chenxiong Qi <cqi@redhat.com> - 0.2-1
 - Initial package

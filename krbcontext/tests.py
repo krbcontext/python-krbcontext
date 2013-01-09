@@ -1,178 +1,324 @@
 # -*- coding: utf-8 -*-
 
-import os
-import subprocess
-import unittest
-import krbV
-
-import tests_config as config
+import context as kctx
 
 from context import get_login
 from context import init_ccache_as_regular_user
 from context import init_ccache_with_keytab
+from context import is_initialize_ccache_necessary
+from context import KRB5InitError
 from context import krbcontext
+from utils import get_tgt_time
 
-class KlistResult(object):
-    ticket_cache = None
-    default_principal = None
+import krbV
+import os
+import subprocess
+import tests_config as config
+import time
+import textwrap
+import unittest
 
-def parse_klist_result(ccache_file):
-    ''' Parse klist result to extract kerberos information '''
 
-    klist_proc = subprocess.Popen(('klist -c %s' % ccache_file).split(),
-                                  stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    stdout_data, stderr_data = klist_proc.communicate()
+def init_user_ccache(lifetime=None):
+    cmd = 'kinit %(lifetime)s -c %(ccache)s %(princ)s' % {
+        'lifetime': '-l %s' % lifetime if lifetime is not None else '',
+        'princ': config.user_principal,
+        'ccache': config.user_ccache_file, }
+    os.system(cmd)
 
-    if klist_proc.returncode > 0:
-        return None
+def init_ccache_using_keytab(lifetime=None):
+    cmd = 'kinit %(lifetime)s -c %(ccache)s -k -t %(keytab)s %(princ)s' % {
+        'lifetime': '-l %s' % lifetime if lifetime is not None else '',
+        'keytab': config.user_keytab_file,
+        'princ': config.service_principal,
+        'ccache': config.user_ccache_file, }
+    os.system(cmd)
 
-    from cStringIO import StringIO
-    inbuf = StringIO(stdout_data)
-    result = KlistResult()
-    for line in inbuf:
-        line = line.strip('\r\n')
-        if line.startswith('Ticket cache: '):
-            result.ticket_cache = line.replace('Ticket cache: ', '')
-        if line.startswith('Default principal: '):
-            result.default_principal = line.replace('Default principal: ', '')
-    inbuf.close()
-    return result
+def krb_default_cc_name():
+    context = krbV.default_context()
+    return context.default_ccache().name
 
-# TODO: test configuration for testing is a good idea.
-class TestBase(unittest.TestCase):
+def krb_default_keytab_name():
+    context = krbV.default_context()
+    return context.default_keytab().name
 
+def get_tgt_time_from_ccache(principal_name):
+    context = krbV.default_context()
+    principal = krbV.Principal(principal_name, context=context)
+    ccache = krbV.CCache(config.user_ccache_file, context=context)
+    ct = get_tgt_time(context, ccache, principal)
+    return ct.endtime
+
+class CCacheInitializationRequiredTest(unittest.TestCase):
     def setUp(self):
-        self.default_ccache_file = '/tmp/krb5cc_%d' % os.getuid()
-        self.default_ccache_file_bak = self.default_ccache_file + '.bak'
-
-        if os.path.exists(self.default_ccache_file):
-            os.rename(self.default_ccache_file, self.default_ccache_file_bak)
+        os.environ['KRB5CCNAME'] = config.user_ccache_file
 
     def tearDown(self):
-        if os.path.exists(self.default_ccache_file_bak):
-            os.rename(self.default_ccache_file_bak, self.default_ccache_file)
+        del os.environ['KRB5CCNAME']
 
-    def test_configuration(self):
-        pass
+    def testCCacheFileNotFound(self):
+        os.system('kdestroy -c %s 2>/dev/null' % config.user_ccache_file)
+        context = krbV.default_context()
+        ccache = krbV.CCache(config.user_ccache_file, context=context)
+        principal = krbV.Principal(config.service_principal, context=context)
+        result = is_initialize_ccache_necessary(context, ccache, principal)
+        self.assert_(result)
 
-class TestInitCCacheAsRegularUser(TestBase):
-    ''' Test case for initializing credential cache as regular user '''
+        if config.run_under_user_principal:
+            context = krbV.default_context()
+            ccache = krbV.CCache(config.user_ccache_file, context=context)
+            principal = krbV.Principal(config.user_principal, context=context)
+            result = is_initialize_ccache_necessary(context, ccache, principal)
+            self.assert_(result)
 
-    def test_init_with_defaults(self):
-        ''' initializing with all default values '''
+    def testCCacheFileBadFormat(self):
+        os.system('echo > %s' % config.user_ccache_file)
+        context = krbV.default_context()
+        ccache = krbV.CCache(config.user_ccache_file, context=context)
+        principal = krbV.Principal(config.service_principal, context=context)
+        result = is_initialize_ccache_necessary(context, ccache, principal)
+        self.assert_(result)
 
-        ccache_file = init_ccache_as_regular_user()
+        if config.run_under_user_principal:
+            context = krbV.default_context()
+            ccache = krbV.CCache(config.user_ccache_file, context=context)
+            principal = krbV.Principal(config.user_principal, context=context)
+            result = is_initialize_ccache_necessary(context, ccache, principal)
+            self.assert_(result)
 
-        self.assertEqual(ccache_file, self.default_ccache_file,
-            'The newly generated credential cache file is not the default one.')
+    def testInitCCacheIsNecessary(self):
+        ''' Sleep several seconds after initializing credentials cache so that
+            it expires.
+        '''
+        if config.run_under_user_principal:
+            init_user_ccache(lifetime='3s')
+            time.sleep(5)
+            context = krbV.default_context()
+            ccache = krbV.CCache(config.user_ccache_file, context=context)
+            principal = krbV.Principal(config.user_principal, context=context)
+            result = is_initialize_ccache_necessary(context, ccache, principal)
+            self.assert_(result)
 
-        result = parse_klist_result(ccache_file)
-        self.assertEqual(result.ticket_cache, 'FILE:%s' % self.default_ccache_file)
-        self.assertEqual(result.default_principal.split('@')[0], get_login())
+        init_ccache_using_keytab(lifetime='3s')
+        time.sleep(5)
+        context = krbV.default_context()
+        ccache = krbV.CCache(config.user_ccache_file, context=context)
+        principal = krbV.Principal(config.service_principal, context=context)
+        result = is_initialize_ccache_necessary(context, ccache, principal)
+        self.assert_(result)
 
-    def test_init_with_specified_arguments(self):
-        ''' Do not use default values '''
+    def testInitCCacheIsUnnecessary(self):
+        if config.run_under_user_principal:
+            init_user_ccache()
+            context = krbV.default_context()
+            ccache = krbV.CCache(config.user_ccache_file, context=context)
+            principal = krbV.Principal(config.user_principal, context=context)
+            result = is_initialize_ccache_necessary(context, ccache, principal)
+            self.assertFalse(result)
 
-        ccache_file = init_ccache_as_regular_user(
-           principal=config.user_principal,
-           ccache_file=config.user_ccache_file)
-        self.assertEqual(ccache_file, config.user_ccache_file,
-            'The returned ccache_file does not equal the one passed to method.')
+        init_ccache_using_keytab()
+        context = krbV.default_context()
+        ccache = krbV.CCache(config.user_ccache_file, context=context)
+        principal = krbV.Principal(config.service_principal, context=context)
+        result = is_initialize_ccache_necessary(context, ccache, principal)
+        self.assertFalse(result)
 
-        result = parse_klist_result(ccache_file)
-        self.assertEqual(result.ticket_cache, 'FILE:%s' % config.user_ccache_file)
-        self.assertEqual(result.default_principal, config.user_principal)
+class GetDefaultCCacheTest(unittest.TestCase):
+    def setUp(self):
+        self.context = krbV.default_context()
 
-class TestInitCCacheWithKeytab(TestBase):
-    '''Test case for initializing credential cache with keytab
+    def testFromEnvironmentVariable(self):
+        os.environ['KRB5CCNAME'] = config.user_ccache_file
+        ccache = kctx.get_default_ccache(self.context)
+        del os.environ['KRB5CCNAME']
+        self.assertEqual(ccache.name, config.user_ccache_file)
 
-    Developer must own a valid keytab file and the service principal
-    before testing. Of course, you are developing a Kerberos application
-    and you should get them from the system administrator.
-    '''
+    def testFromKerberosDefaultCCacheName(self):
+        ccache = kctx.get_default_ccache(self.context)
+        default_cc_name = '/tmp/krb5cc_%d' % os.getuid()
+        self.assertTrue(ccache.name.endswith(default_cc_name))
 
-    def test_init_with_default_ccache(self):
-        self.assert_(os.path.exists('/etc/krb5.keytab'),
-            'Default keytab does not exist.')
+class CleanArgumetsUsingKeytabTest(unittest.TestCase):
+    def setUp(self):
+        self.context = krbV.default_context()
+        self.kwargs = {
+            'using_keytab': True,
+        }
 
-        ccache_file = init_ccache_with_keytab(
-            principal=config.service_principal)
+    def testPrincipalNotProvide(self):
+        self.assertRaises(NameError, kctx.clean_kwargs,
+                          self.context, self.kwargs)
 
-        self.assertEqual(ccache_file, self.default_ccache_file)
+    def testAllDefault(self):
+        self.kwargs.update({
+            'principal': config.service_principal,
+        })
+        cleaned_kwargs = kctx.clean_kwargs(self.context, self.kwargs)
 
-        result = parse_klist_result(ccache_file)
-        self.assertEqual(result.ticket_cache, 'FILE:%s' % self.default_ccache_file)
-        self.assertEqual(result.default_principal, config.service_principal)
+        self.assert_('principal' in cleaned_kwargs)
+        self.assertEqual(
+            cleaned_kwargs['principal'].name,
+            config.service_principal,
+            'Principal is not cleaned to proper an Principal.')
 
-    def test_init_with_specified_arguments(self):
+        self.assert_('ccache' in cleaned_kwargs)
+        expected_ccache_file = krb_default_cc_name()
+        self.assertEqual(
+            cleaned_kwargs['ccache'].name, expected_ccache_file,
+            'Cleaned ccache %s does not equal to expected %s.' % (
+                cleaned_kwargs['ccache'].name, expected_ccache_file))
 
-        ccache_file = init_ccache_with_keytab(
-            principal=config.service_principal,
-            keytab_file=config.user_keytab_file,
-            ccache_file=config.user_ccache_file)
+        self.assert_('keytab' in cleaned_kwargs)
+        kt = cleaned_kwargs['keytab']
+        expected_kt_name = krb_default_keytab_name()
+        self.assertEqual(kt.name, expected_kt_name,
+                         'Default key table should be used if not provide.')
 
-        result = parse_klist_result(ccache_file)
-        self.assertEqual(result.ticket_cache, 'FILE:%s' % config.user_ccache_file)
-        self.assertEqual(result.default_principal, config.service_principal)
+    def testSpecifyAllManually(self):
+        self.kwargs.update({
+            'principal': config.service_principal,
+            'ccache_file': config.user_ccache_file,
+            'keytab_file': config.user_keytab_file,
+        })
 
-class Testkrbcontext(unittest.TestCase):
-    ''' Test case for krbcontext '''
+        cleaned_kwargs = kctx.clean_kwargs(self.context, self.kwargs)
+
+        self.assert_('ccache' in cleaned_kwargs)
+        self.assertEqual(
+            cleaned_kwargs['ccache'].name, config.user_ccache_file,
+            'Cleaned ccache %s does not equal to expected %s.' % (
+                cleaned_kwargs['ccache'].name, config.user_ccache_file))
+
+        self.assert_('keytab' in cleaned_kwargs)
+        kt = cleaned_kwargs['keytab']
+        expected_kt_name = config.user_keytab_file
+        self.assert_(kt.name.endswith(expected_kt_name),
+                         'Key table %s should contain expected filename %s.' % (
+                            kt.name, expected_kt_name))
+
+class CleanArgumetsAsRegularUserTest(unittest.TestCase):
+    def setUp(self):
+        self.context = krbV.default_context()
+        self.kwargs = {
+            'using_keytab': False,
+        }
+
+    def testAllDefault(self):
+        cleaned_kwargs = kctx.clean_kwargs(self.context, {})
+        self.assert_('using_keytab' in cleaned_kwargs)
+        self.assertFalse(cleaned_kwargs['using_keytab'])
+
+        self.assert_('principal' in cleaned_kwargs)
+        principal = cleaned_kwargs['principal']
+        self.assertEqual(principal.name.split('@')[0], kctx.get_login())
+
+        self.assert_('ccache' in cleaned_kwargs)
+        ccache = cleaned_kwargs['ccache']
+        self.assertEqual(ccache.name, krb_default_cc_name())
+
+    def testSpecifyAllManually(self):
+        self.kwargs.update({
+            'principal': config.user_principal,
+            'ccache_file': config.user_ccache_file,
+        })
+        cleaned_kwargs = kctx.clean_kwargs(self.context, self.kwargs)
+
+        self.assert_('principal' in cleaned_kwargs)
+        test_user_princ = cleaned_kwargs['principal']
+        self.assertEqual(
+            test_user_princ.name, config.user_principal,
+            'Principal name %s does not equal to expected %s.' % (
+                test_user_princ, config.user_principal))
+
+        self.assert_('ccache' in cleaned_kwargs)
+        ccache = cleaned_kwargs['ccache']
+        self.assertEqual(ccache.name, config.user_ccache_file)
+
+class InitAsRegularUserTest(unittest.TestCase):
+    def _setUp(self):
+        self.context = krbV.default_context()
+        self.principal = krbV.Principal(config.user_principal,
+                                        context=self.context)
+        self.ccache = krbV.CCache(config.user_ccache_file,
+                                  context=self.context)
+
+    def _testInitialization(self):
+        cc_name = kctx.init_ccache_as_regular_user(self.principal, self.ccache)
+        self.assert_(cc_name.endswith(self.ccache.name))
+
+    def _testInitializationWithWrongArguments(self):
+        principal = krbV.Principal('someone@domain.com', context=self.context)
+        self.assertRaises(KRB5InitError,
+                          kctx.init_ccache_as_regular_user,
+                          principal, self.ccache)
+
+    if config.run_under_user_principal:
+        setUp = _setUp
+        # Add other test case
+        testInitialization = _testInitialization
+        testInitializationWithWrongArguments = \
+            _testInitializationWithWrongArguments
+
+class InitUsingKeytabTest(unittest.TestCase):
+    def setUp(self):
+        self.context = krbV.default_context()
+        self.principal = krbV.Principal(config.service_principal,
+                                        context=self.context)
+        self.keytab = krbV.Keytab(config.user_keytab_file,
+                                  context=self.context)
+        self.ccache = krbV.CCache(config.user_ccache_file,
+                                  context=self.context)
+
+    def testInitialization(self):
+        cc_name = init_ccache_with_keytab(self.principal,
+                                          self.keytab,
+                                          self.ccache)
+        self.assert_(cc_name.endswith(self.ccache.name))
+
+class krbcontextUsingKeytabTest(unittest.TestCase):
 
     def setUp(self):
-        self.origin_ccache_file = os.getenv('KRB5CCNAME')
+        init_ccache_using_keytab(lifetime='3s')
 
-    def test_not_use_keytab(self):
-        with krbcontext():
-            self.assertNotEqual(os.getenv('KRB5CCNAME'), None)
-            ccache_file = os.getenv('KRB5CCNAME')
-            self.assert_(os.path.exists(ccache_file))
+        self.kwargs = {
+            'using_keytab': True,
+            'principal': config.service_principal,
+            'keytab_file': config.user_keytab_file,
+            'ccache_file': config.user_ccache_file,
+        }
 
-            proc = subprocess.Popen(('klist -c %s' % ccache_file).split(),
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            returncode = proc.wait()
-            self.assertEqual(0, returncode)
+    def tearDown(self):
+        cmd = 'kdestroy -c %s' % config.user_ccache_file
+        os.system(cmd)
 
-        self.assertEqual(self.origin_ccache_file, os.getenv('KRB5CCNAME'),
-            'The original KRB5CCNAME\'s value does not restored.')
+    def testInitializeCCacheIsNotRequired(self):
+        import os
+        expected_endtime = get_tgt_time_from_ccache(config.service_principal)
+        with krbcontext(**self.kwargs):
+            pass
+        test_endtime = get_tgt_time_from_ccache(config.service_principal)
+        self.assertEqual(test_endtime, expected_endtime)
 
-        with krbcontext(
-            principal=config.user_principal,
-            ccache_file=config.user_ccache_file):
-
-            ccache_file = os.getenv('KRB5CCNAME')
-            ccache = krbV.CCache(ccache_file)
-            try:
-                princ = ccache.principal()
-            except krbV.Krb5Error, err:
-                self.fail(err.args[1])
-            self.assertEqual(princ.name, config.user_principal)
-
-    def test_using_keytab(self):
-        with krbcontext(using_keytab=True, principal=config.service_principal):
-            self.assertNotEqual(os.getenv('KRB5CCNAME'), None)
-            ccache_file = os.getenv('KRB5CCNAME')
-            self.assert_(os.path.exists(ccache_file))
-
-            proc = subprocess.Popen(('klist -c %s' % ccache_file).split(),
-                stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-            returncode = proc.wait()
-            self.assertEqual(0, returncode)
-
-        self.assertEqual(self.origin_ccache_file, os.getenv('KRB5CCNAME'),
-            'The original KRB5CCNAME\'s value does not restored.')
-
-        with krbcontext(using_keytab=True,
-                        principal=config.service_principal,
-                        keytab_file=config.user_keytab_file,
-                        ccache_file=config.user_ccache_file):
-
-            ccache_file = os.getenv('KRB5CCNAME')
-            ccache = krbV.CCache(ccache_file)
-            try:
-                princ = ccache.principal()
-            except krbV.Krb5Error, err:
-                self.fail(err.args[1])
-            self.assertEqual(princ.name, config.service_principal)
+    def testInitializeCCacheWhenTGTExpires(self):
+        endtime_before_init = get_tgt_time_from_ccache(config.service_principal)
+        # Sleep for a while to make TGT expired
+        time.sleep(5)
+        with krbcontext(**self.kwargs):
+            pass
+        test_endtime = get_tgt_time_from_ccache(config.service_principal)
+        self.assert_(test_endtime > endtime_before_init)
 
 if __name__ == '__main__':
+    help_msg = 'During running test, some test cases will sleep for several ' \
+               'minutes in order to stimulate that credential expires.\n\n'
+
+    if config.run_under_user_principal:
+        help_msg += 'You have enabled configuration run_under_user_principal.' \
+                    ' So, when each time initialize credential cache using a ' \
+                    'regular user\'s principal, you will be prompted to enter' \
+                    ' password.'
+
+    print '\n'.join(textwrap.wrap(help_msg, 80))
+
     unittest.main()
+

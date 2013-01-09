@@ -17,3 +17,6 @@ user_keytab_file = '/etc/httpd/conf/httpd.keytab'
 
 # Absolute path of credential cache
 user_ccache_file = '/tmp/krb5cc_test'
+
+# Whether run tests with user's principal
+run_under_user_principal = False

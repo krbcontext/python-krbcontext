@@ -19,6 +19,25 @@ There are several concept you must know before using krbcontext, principal of us
 and service, service Keytab file, and credential cache (ticket file). Therefore,
 the arguments passed to krbcontext are mapped to these concepts.
 
+Lazy initialization
+-------------------
+
+Before running client's code, krbcontext checks credential krbtgt/REALM@REALM in
+credentials cache locally to see whether it is necessary it expires.
+
+Thread-safe
+-----------
+
+If your want krbcontext to initialize credential in Kerberos standard
+credenticial cache, or pass a file name to argument ``ccache_file`` explicitly,
+krbcontext is not thread-safe. In multithreaded environment, there are several
+method to overcome this. For example,
+
+- Give separate credential cache file name for each thread.
+- Do synchronization by yourself.
+
+Thread-safe version is planned and will be implemented in next version.
+
 Dependencies
 ------------
 
