@@ -1,7 +1,7 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 
 %define src_name krbcontext
-%define version %(cat VERSION.txt)
+%define version 0.3.0
 %define release 1
 
 Summary: A Kerberos context manager
