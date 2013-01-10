@@ -10,7 +10,7 @@ def get_long_description():
     return '''%s
 
 %s''' % (
-    open('README.rst', 'r').read(),
+    open('README.txt', 'r').read(),
     open('CHANGES.txt', 'r').read())
 
 setup(
