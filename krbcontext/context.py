@@ -4,6 +4,7 @@ from contextlib import contextmanager
 from datetime import datetime
 from utils import get_tgt_time
 from utils import get_login
+from threading import Lock
 
 import krbV
 import os, sys
@@ -15,6 +16,7 @@ __all__ = ( 'krbcontext',
 
 
 ENV_KRB5CCNAME = 'KRB5CCNAME'
+__init_lock = Lock()
 
 # TODO: put this into standalone module
 class KRB5InitError(Exception):
@@ -29,10 +31,12 @@ def init_ccache_as_regular_user(principal, ccache):
     args = { 'principal': principal.name,
              'ccache_file': ccache.name, }
 
+    __init_lock.acquire()
     kinit_proc = subprocess.Popen(
         (cmd % args).split(),
         stderr=subprocess.PIPE)
     stdout_data, stderr_data = kinit_proc.communicate()
+    __init_lock.release()
 
     if kinit_proc.returncode > 0:
         raise KRB5InitError(stderr_data[:stderr_data.find('\n')])
@@ -44,8 +48,10 @@ def init_ccache_with_keytab(principal, keytab, ccache):
 
     Return the filename of newly initialized credential cache.
     '''
+    __init_lock.acquire()
     ccache.init(principal)
     ccache.init_creds_keytab(principal=principal, keytab=keytab)
+    __init_lock.release()
     return ccache.name
 
 def get_default_ccache(context):
