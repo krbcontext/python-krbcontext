@@ -1,7 +1,7 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 
 %define src_name krbcontext
-%define version 0.3.0
+%define version 0.3.1
 %define release 1
 
 Summary: A Kerberos context manager
@@ -53,6 +53,9 @@ rm -rf $RPM_BUILD_ROOT
 %{python_sitelib}/krbcontext-%{version}-*.egg-info
 
 %changelog
+
+* Fri Jan 18 2013 Chenxiong Qi <cqi@redhat.com> - 0.3.1-1
+- Thread-safe credentials cache initialization
 
 * Thu Jan 10 2013 Chenxiong Qi <cqi@redhat.com> - 0.3.0-1
 - Lazy initialization of credential cache.
