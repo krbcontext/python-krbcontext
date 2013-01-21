@@ -23,7 +23,7 @@ Lazy initialization
 -------------------
 
 Before running client's code, krbcontext checks credential krbtgt/REALM@REALM in
-credentials cache locally to see whether it is necessary it expires.
+credentials cache locally to see whether it is necessary to be initialized.
 
 Thread-safe
 -----------
