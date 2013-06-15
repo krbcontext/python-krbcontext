@@ -1,2 +1,3 @@
 include *.txt *.py *.spec
+include LICENSE
 recursive-include krbcontext *.py
