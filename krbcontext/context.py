@@ -7,20 +7,22 @@ from utils import get_login
 from threading import Lock
 
 import krbV
-import os, sys
+import os
+import sys
 import subprocess
 
 
-__all__ = ( 'krbcontext',
-            'KRB5InitError', )
+__all__ = ('krbcontext', 'KRB5InitError')
 
 
 ENV_KRB5CCNAME = 'KRB5CCNAME'
 __init_lock = Lock()
 
+
 # TODO: put this into standalone module
 class KRB5InitError(Exception):
     pass
+
 
 def init_ccache_as_regular_user(principal, ccache):
     '''Initialize credential cache as a regular user
@@ -28,8 +30,7 @@ def init_ccache_as_regular_user(principal, ccache):
     Return the filename of newly initialized credential cache
     '''
     cmd = 'kinit -c %(ccache_file)s %(principal)s'
-    args = { 'principal': principal.name,
-             'ccache_file': ccache.name, }
+    args = {'principal': principal.name, 'ccache_file': ccache.name}
 
     __init_lock.acquire()
     kinit_proc = subprocess.Popen(
@@ -43,6 +44,7 @@ def init_ccache_as_regular_user(principal, ccache):
 
     return ccache.name
 
+
 def init_ccache_with_keytab(principal, keytab, ccache):
     ''' Initialize credential cache using keytab file.
 
@@ -54,11 +56,13 @@ def init_ccache_with_keytab(principal, keytab, ccache):
     __init_lock.release()
     return ccache.name
 
+
 def get_default_ccache(context):
     if ENV_KRB5CCNAME in os.environ:
         return krbV.CCache(os.environ[ENV_KRB5CCNAME], context=context)
     else:
         return context.default_ccache()
+
 
 def is_initialize_ccache_necessary(context, ccache, principal):
     ''' Judge whether initializing credential cache is necessary.
@@ -98,15 +102,16 @@ def is_initialize_ccache_necessary(context, ccache, principal):
         raise
     return datetime.now() >= cred_time.endtime
 
+
 def clean_kwargs(context, kwargs):
     ''' Clean argument to related object
 
     In the case of using Key table, principal is required. keytab_file is
-    optional, and default key table file /etc/krb5.keytab is used if keytab_file
-    is not provided.
+    optional, and default key table file /etc/krb5.keytab is used if
+    keytab_file is not provided.
 
-    In the case of initing as a regular user, principal is optional, and current
-    user's effective name is used if principal is not provided.
+    In the case of initing as a regular user, principal is optional, and
+    current user's effective name is used if principal is not provided.
 
     By default, initialize credentials cache for regular user.
     '''
@@ -148,6 +153,7 @@ def clean_kwargs(context, kwargs):
 
     return cleaned_kwargs
 
+
 def init_ccache_if_necessary(context, kwargs):
     ''' Initialize credential cache if necessary.
 
@@ -168,12 +174,14 @@ def init_ccache_if_necessary(context, kwargs):
             # If client script is not running in terminal, it is impossible for
             # user to enter his/her password.
             if not sys.stdin.isatty():
-                raise IOError('This is not running on console. So, you need to '
-                              'run kinit with your principal manually before '
-                              'anything goes.')
+                msg = 'This is not running on console. So, you need to ' \
+                      'run kinit with your principal manually before ' \
+                      'anything goes.'
+                raise IOError(msg)
             ccache_file = init_ccache_as_regular_user(principal, ccache)
         os.environ[ENV_KRB5CCNAME] = ccache_file
     return (init_required, old_ccache)
+
 
 @contextmanager
 def krbcontext(**kwargs):
@@ -197,4 +205,3 @@ def krbcontext(**kwargs):
                 os.environ[ENV_KRB5CCNAME] = old_ccache
             else:
                 del os.environ[ENV_KRB5CCNAME]
-

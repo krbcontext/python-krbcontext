@@ -11,12 +11,15 @@ import pwd
 CredentialTime = namedtuple('CredentialTime',
                             'authtime starttime endtime renew_till')
 
+
 def get_login():
     ''' Get current effective user name '''
     return pwd.getpwuid(os.getuid()).pw_name
 
+
 def build_tgt_ticket(principal):
-    return 'krbtgt/%(realm)s@%(realm)s' % { 'realm': principal.realm, }
+    return 'krbtgt/%(realm)s@%(realm)s' % {'realm': principal.realm}
+
 
 def get_tgt_time(context, ccache, principal):
     ''' Get specified TGT's credential time.

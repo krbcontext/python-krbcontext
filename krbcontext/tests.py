@@ -26,6 +26,7 @@ def init_user_ccache(lifetime=None):
         'ccache': config.user_ccache_file, }
     os.system(cmd)
 
+
 def init_ccache_using_keytab(lifetime=None):
     cmd = 'kinit %(lifetime)s -c %(ccache)s -k -t %(keytab)s %(princ)s' % {
         'lifetime': '-l %s' % lifetime if lifetime is not None else '',
@@ -34,13 +35,16 @@ def init_ccache_using_keytab(lifetime=None):
         'ccache': config.user_ccache_file, }
     os.system(cmd)
 
+
 def krb_default_cc_name():
     context = krbV.default_context()
     return context.default_ccache().name
 
+
 def krb_default_keytab_name():
     context = krbV.default_context()
     return context.default_keytab().name
+
 
 def get_tgt_time_from_ccache(principal_name):
     context = krbV.default_context()
@@ -48,6 +52,7 @@ def get_tgt_time_from_ccache(principal_name):
     ccache = krbV.CCache(config.user_ccache_file, context=context)
     ct = get_tgt_time(context, ccache, principal)
     return ct.endtime
+
 
 class CCacheInitializationRequiredTest(unittest.TestCase):
     def setUp(self):
@@ -123,6 +128,7 @@ class CCacheInitializationRequiredTest(unittest.TestCase):
         result = is_initialize_ccache_necessary(context, ccache, principal)
         self.assertFalse(result)
 
+
 class GetDefaultCCacheTest(unittest.TestCase):
     def setUp(self):
         self.context = krbV.default_context()
@@ -137,6 +143,7 @@ class GetDefaultCCacheTest(unittest.TestCase):
         ccache = kctx.get_default_ccache(self.context)
         default_cc_name = '/tmp/krb5cc_%d' % os.getuid()
         self.assertTrue(ccache.name.endswith(default_cc_name))
+
 
 class CleanArgumetsUsingKeytabTest(unittest.TestCase):
     def setUp(self):
@@ -192,9 +199,11 @@ class CleanArgumetsUsingKeytabTest(unittest.TestCase):
         self.assert_('keytab' in cleaned_kwargs)
         kt = cleaned_kwargs['keytab']
         expected_kt_name = config.user_keytab_file
-        self.assert_(kt.name.endswith(expected_kt_name),
-                         'Key table %s should contain expected filename %s.' % (
-                            kt.name, expected_kt_name))
+        self.assert_(
+            kt.name.endswith(expected_kt_name),
+            'Key table %s should contain expected filename %s.' % (
+                kt.name, expected_kt_name))
+
 
 class CleanArgumetsAsRegularUserTest(unittest.TestCase):
     def setUp(self):
@@ -234,6 +243,7 @@ class CleanArgumetsAsRegularUserTest(unittest.TestCase):
         ccache = cleaned_kwargs['ccache']
         self.assertEqual(ccache.name, config.user_ccache_file)
 
+
 class InitAsRegularUserTest(unittest.TestCase):
     def _setUp(self):
         self.context = krbV.default_context()
@@ -259,6 +269,7 @@ class InitAsRegularUserTest(unittest.TestCase):
         testInitializationWithWrongArguments = \
             _testInitializationWithWrongArguments
 
+
 class InitUsingKeytabTest(unittest.TestCase):
     def setUp(self):
         self.context = krbV.default_context()
@@ -274,6 +285,7 @@ class InitUsingKeytabTest(unittest.TestCase):
                                           self.keytab,
                                           self.ccache)
         self.assert_(cc_name.endswith(self.ccache.name))
+
 
 class krbcontextUsingKeytabTest(unittest.TestCase):
 
@@ -321,4 +333,3 @@ if __name__ == '__main__':
     print '\n'.join(textwrap.wrap(help_msg, 80))
 
     unittest.main()
-
