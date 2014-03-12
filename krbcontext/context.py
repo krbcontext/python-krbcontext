@@ -172,16 +172,20 @@ def clean_kwargs(context, kwargs):
 def init_ccache_if_necessary(context, kwargs):
     ''' Initialize credential cache if necessary.
 
+    The original credential cache is saved and returned for recovery in the
+    final step. And the specified one is assigned to KRB5CCNAME in current
+    process.
+
     Arguments:
     - context: current krb5 context.
     - kwargs: cleaned kwargs passed to krbcontext.
     '''
     ccache = kwargs['ccache']
     principal = kwargs['principal']
-    old_ccache = None
+    old_ccache = os.getenv(ENV_KRB5CCNAME)
     init_required = is_initialize_ccache_necessary(context, ccache, principal)
+    ccache_file = ccache.name
     if init_required:
-        old_ccache = os.getenv(ENV_KRB5CCNAME)
         if kwargs['using_keytab']:
             keytab = kwargs['keytab']
             ccache_file = init_ccache_with_keytab(principal, keytab, ccache)
@@ -194,7 +198,7 @@ def init_ccache_if_necessary(context, kwargs):
                       'anything goes.'
                 raise IOError(msg)
             ccache_file = init_ccache_as_regular_user(principal, ccache)
-        os.environ[ENV_KRB5CCNAME] = ccache_file
+    os.environ[ENV_KRB5CCNAME] = ccache_file
     return (init_required, old_ccache)
 
 
