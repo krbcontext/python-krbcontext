@@ -28,7 +28,7 @@ credentials cache locally to see whether it is necessary to be initialized.
 Thread-safe
 -----------
 
-If your want krbcontext to initialize credential in Kerberos standard
+If you want krbcontext to initialize credential in Kerberos standard
 credenticial cache, or pass a file name to argument ``ccache_file`` explicitly,
 krbcontext is thread-safe. However, it is still suggestion that you pass
 credentials cache file name for each thread individually.
