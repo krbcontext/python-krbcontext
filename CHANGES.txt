@@ -1,6 +1,13 @@
 ChangeLog
 =========
 
+0.3.3 (2014-03-12)
+------------------
+
+- Change README.txt to README.rst
+- Fix: logic error of KRB5CCNAME maintenance during initialization
+- Fix testcase of getting default credential cache
+
 0.3.2 (2013-06-15)
 ------------------
 

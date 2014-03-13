@@ -1,7 +1,7 @@
 %{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
 
 %define src_name krbcontext
-%define version 0.3.2
+%define version 0.3.3
 %define release 1
 
 Summary: A Kerberos context manager
@@ -36,7 +36,7 @@ and service, service Keytab file, and credential cache (ticket file). Therefore,
 the arguments passed to krbcontext are mapped to these concepts.
 
 %prep
-%setup -n %{src_name}-%{version}
+%setup -q -n %{src_name}-%{version}
 
 %build
 %{__python} setup.py build
@@ -54,6 +54,11 @@ rm -rf $RPM_BUILD_ROOT
 %{python_sitelib}/krbcontext-%{version}-*.egg-info
 
 %changelog
+
+* Thu Mar 13 2014 Chenxiong Qi <cqi@redhat.com> - 0.3.3-1
+- Change README.txt to README.rst
+- Fix: logic error of KRB5CCNAME maintenance during initialization
+- Fix testcase of getting default credential cache
 
 * Fri Jan 18 2013 Chenxiong Qi <cqi@redhat.com> - 0.3.1-1
 - Thread-safe credentials cache initialization
