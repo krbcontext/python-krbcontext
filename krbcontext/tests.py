@@ -26,11 +26,13 @@ def init_user_ccache(lifetime=None):
 
 
 def init_ccache_using_keytab(lifetime=None):
-    cmd = 'kinit %(lifetime)s -c %(ccache)s -k -t %(keytab)s %(princ)s' % {
+    args = {
         'lifetime': '-l %s' % lifetime if lifetime is not None else '',
         'keytab': config.user_keytab_file,
         'princ': config.service_principal,
-        'ccache': config.user_ccache_file, }
+        'ccache': config.user_ccache_file,
+    }
+    cmd = 'kinit %(lifetime)s -c %(ccache)s -k -t %(keytab)s %(princ)s' % args
     os.system(cmd)
 
 
@@ -52,12 +54,30 @@ def get_tgt_time_from_ccache(principal_name):
     return ct.endtime
 
 
-class CCacheInitializationRequiredTest(unittest.TestCase):
+class OriginalKRB5CCNAMESafeMixin(object):
+    '''Ensure the original system's KRB5CCNAME is safe'''
+
+    def protect_KRB5CCNAME(self):
+        self._original_krb5ccname_env = os.getenv(ENV_KRB5CCNAME)
+
+    def recovery_KRB5CCNAME(self):
+        has_krb5ccname_in_process = self._original_krb5ccname_env is not None
+        if has_krb5ccname_in_process:
+            os.environ[ENV_KRB5CCNAME] = self._original_krb5ccname_env
+        else:
+            krb5ccname_set_in_testcases = ENV_KRB5CCNAME in os.environ
+            if krb5ccname_set_in_testcases:
+                del os.environ[ENV_KRB5CCNAME]
+
+
+class CCacheInitializationRequiredTest(unittest.TestCase,
+                                       OriginalKRB5CCNAMESafeMixin):
     def setUp(self):
-        os.environ['KRB5CCNAME'] = config.user_ccache_file
+        self.protect_KRB5CCNAME()
+        os.environ[ENV_KRB5CCNAME] = config.user_ccache_file
 
     def tearDown(self):
-        del os.environ['KRB5CCNAME']
+        self.recovery_KRB5CCNAME()
 
     def testCCacheFileNotFound(self):
         os.system('kdestroy -c %s 2>/dev/null' % config.user_ccache_file)
@@ -127,22 +147,16 @@ class CCacheInitializationRequiredTest(unittest.TestCase):
         self.assertFalse(result)
 
 
-class GetDefaultCCacheTest(unittest.TestCase):
+class GetDefaultCCacheTest(unittest.TestCase, OriginalKRB5CCNAMESafeMixin):
     def setUp(self):
         self.context = krbV.default_context()
-        self.original_krb5ccname_env = os.getenv(ENV_KRB5CCNAME)
+        self.protect_KRB5CCNAME()
 
     def tearDown(self):
-        has_krb5ccname_in_process = self.original_krb5ccname_env is not None
-        if has_krb5ccname_in_process:
-            os.environ[ENV_KRB5CCNAME] = self.original_krb5ccname_env
-        else:
-            krb5ccname_set_in_testcases = ENV_KRB5CCNAME in os.environ
-            if krb5ccname_set_in_testcases:
-                del os.environ[ENV_KRB5CCNAME]
+        self.recovery_KRB5CCNAME()
 
     def testFromEnvironmentVariable(self):
-        os.environ['KRB5CCNAME'] = config.user_ccache_file
+        os.environ[ENV_KRB5CCNAME] = config.user_ccache_file
         ccache = kctx.get_default_ccache(self.context)
         self.assertEqual(ccache.name, config.user_ccache_file)
 
