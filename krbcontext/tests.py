@@ -2,8 +2,7 @@
 
 import context as kctx
 
-from context import get_login
-from context import init_ccache_as_regular_user
+from context import ENV_KRB5CCNAME
 from context import init_ccache_with_keytab
 from context import is_initialize_ccache_necessary
 from context import KRB5InitError
@@ -12,7 +11,6 @@ from utils import get_tgt_time
 
 import krbV
 import os
-import subprocess
 import tests_config as config
 import time
 import textwrap
@@ -132,17 +130,27 @@ class CCacheInitializationRequiredTest(unittest.TestCase):
 class GetDefaultCCacheTest(unittest.TestCase):
     def setUp(self):
         self.context = krbV.default_context()
+        self.original_krb5ccname_env = os.getenv(ENV_KRB5CCNAME)
+
+    def tearDown(self):
+        has_krb5ccname_in_process = self.original_krb5ccname_env is not None
+        if has_krb5ccname_in_process:
+            os.environ[ENV_KRB5CCNAME] = self.original_krb5ccname_env
+        else:
+            krb5ccname_set_in_testcases = ENV_KRB5CCNAME in os.environ
+            if krb5ccname_set_in_testcases:
+                del os.environ[ENV_KRB5CCNAME]
 
     def testFromEnvironmentVariable(self):
         os.environ['KRB5CCNAME'] = config.user_ccache_file
         ccache = kctx.get_default_ccache(self.context)
-        del os.environ['KRB5CCNAME']
         self.assertEqual(ccache.name, config.user_ccache_file)
 
     def testFromKerberosDefaultCCacheName(self):
         ccache = kctx.get_default_ccache(self.context)
-        default_cc_name = '/tmp/krb5cc_%d' % os.getuid()
-        self.assertTrue(ccache.name.endswith(default_cc_name))
+        ccache_file = ccache.name.lstrip(':')
+        default_cc_name = '/run/user/%d/krb5cc' % os.getuid()
+        self.assertTrue(ccache_file.startswith(default_cc_name))
 
 
 class CleanArgumetsUsingKeytabTest(unittest.TestCase):
@@ -292,6 +300,7 @@ class krbcontextUsingKeytabTest(unittest.TestCase):
     def setUp(self):
         init_ccache_using_keytab(lifetime='3s')
 
+        self.sleep_seconds_for_expiration = 5
         self.kwargs = {
             'using_keytab': True,
             'principal': config.service_principal,
@@ -304,7 +313,6 @@ class krbcontextUsingKeytabTest(unittest.TestCase):
         os.system(cmd)
 
     def testInitializeCCacheIsNotRequired(self):
-        import os
         expected_endtime = get_tgt_time_from_ccache(config.service_principal)
         with krbcontext(**self.kwargs):
             pass
@@ -314,7 +322,7 @@ class krbcontextUsingKeytabTest(unittest.TestCase):
     def testInitializeCCacheWhenTGTExpires(self):
         endtime_before_init = get_tgt_time_from_ccache(config.service_principal)
         # Sleep for a while to make TGT expired
-        time.sleep(5)
+        time.sleep(self.sleep_seconds_for_expiration)
         with krbcontext(**self.kwargs):
             pass
         test_endtime = get_tgt_time_from_ccache(config.service_principal)
