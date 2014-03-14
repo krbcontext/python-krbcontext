@@ -49,7 +49,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root)
-%docs README.rst VERSION.txt CHANGES.txt LICENSE MANIFEST.in
+%doc README.rst VERSION.txt CHANGES.txt LICENSE
 %{python_sitelib}/krbcontext/
 %{python_sitelib}/krbcontext-%{version}-*.egg-info
 
