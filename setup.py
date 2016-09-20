@@ -1,32 +1,30 @@
 # -*- coding: utf-8 -*-
 
-from distutils.core import setup
+from setuptools import setup, find_packages
 
-def get_version():
-    version = open('VERSION.txt', 'r').read()
-    return version.strip('\r\n')
 
 def get_long_description():
     return '''%s
 
-%s''' % (
-    open('README.rst', 'r').read(),
-    open('CHANGES.txt', 'r').read())
+%s''' % (open('README.rst', 'r').read(), open('CHANGES.txt', 'r').read())
 
 setup(
-    name = 'krbcontext',
-    version = get_version(),
-    description = 'A Kerberos context manager',
-    long_description = get_long_description(),
-    keywords = 'kerberos context',
-    license = 'GPL',
-    author = 'Chenxiong Qi',
-    author_email = 'cqi@redhat.com',
-    url = 'https://github.com/tkdchen/python-krbcontext',
+    name='krbcontext',
+    version='0.3.3',
+    description='A Kerberos context manager',
+    long_description=get_long_description(),
+    keywords='kerberos context',
+    license='GPL',
+    author='Chenxiong Qi',
+    author_email='cqi@redhat.com',
+    url='https://github.com/tkdchen/python-krbcontext',
 
-    packages = [ 'krbcontext' ],
+    packages=find_packages(),
 
-    classifiers = [
+    setup_requires=['pytest-runner'],
+    tests_require=['mock', 'pytest'],
+
+    classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Environment :: Console',
         'Environment :: Web Environment',

@@ -1,3 +1,2 @@
-include README.rst *.txt *.py *.spec
-include LICENSE
-recursive-include krbcontext *.py
+include LICENSE README.rst *.txt *.spec
+recursive-include tests *

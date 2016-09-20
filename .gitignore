@@ -1,3 +1,13 @@
+.coverage
+
 *~
 *.swp
 *.pyc
+
+*.egg*/
+dist/
+.cache/
+htmlcov/
+
+tags
+TAGS

@@ -1,15 +1,14 @@
 # -*- coding: utf-8 -*-
 
-'''Configuration for running test script
-'''
+'''Configuration for running test script'''
 
 # Format of Kerberos v5 user principal: name@REALM
 # Example: 'qcxhome@DOMAIN.COM'
-user_principal = ''
+user_principal = 'qcxhome@EXAMPLE.COM'
 
 # Format of Kerberos v5 sevice principal: servicename/hostname@REALM
 # Example: HTTP/localhost@DOMAIN.COM
-service_principal = ''
+service_principal = 'HTTP/localhost@EXAMPLE.COM'
 
 # Absolute path of Keytab file
 # Typically, for a web site, it can be the following value

@@ -103,7 +103,7 @@ def is_initialize_ccache_necessary(context, ccache, principal):
         # credential cache is required.
         monitor_errors = (krbV.KRB5_FCC_NOFILE,
                           krbV.KRB5_CC_FORMAT,
-                          krbV.KRB5_CC_NOTFOUND,)
+                          krbV.KRB5_CC_NOTFOUND)
         err_code = err.args[0]
         is_init_required = err_code in monitor_errors
         if is_init_required:
@@ -197,7 +197,7 @@ def init_ccache_if_necessary(context, kwargs):
                       'anything goes.'
                 raise IOError(msg)
             ccache_file = init_ccache_as_regular_user(principal, ccache)
-    os.environ[ENV_KRB5CCNAME] = ccache_file
+        os.environ[ENV_KRB5CCNAME] = ccache_file
     return (init_required, old_ccache)
 
 

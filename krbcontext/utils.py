@@ -15,7 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from collections import namedtuple
 from datetime import datetime
 
 import krbV
@@ -23,8 +22,13 @@ import os
 import pwd
 
 
-CredentialTime = namedtuple('CredentialTime',
-                            'authtime starttime endtime renew_till')
+class CredentialTime(object):
+
+    def __init__(self, authtime, starttime, endtime, renew_till):
+        self.authtime = authtime
+        self.starttime = starttime
+        self.endtime = endtime
+        self.renew_till = renew_till
 
 
 def get_login():
@@ -50,4 +54,5 @@ def get_tgt_time(context, ccache, principal):
              None, None)
     result = ccache.get_credentials(creds, krbV.KRB5_GC_CACHED, 0)
     time_conv = datetime.fromtimestamp
-    return CredentialTime._make([time_conv(t) for t in result[3]])
+    authtime, starttime, endtime, renew_till = [time_conv(t) for t in result[3]]
+    return CredentialTime(authtime, starttime, endtime, renew_till)
