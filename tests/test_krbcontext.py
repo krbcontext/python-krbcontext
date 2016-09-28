@@ -2,6 +2,7 @@
 
 import krbV
 import os
+import subprocess
 import unittest
 
 from datetime import datetime
@@ -18,22 +19,20 @@ from krbcontext.utils import CredentialTime
 
 
 def init_user_ccache(lifetime=None):
-    cmd = 'kinit %(lifetime)s -c %(ccache)s %(princ)s' % {
-        'lifetime': '-l %s' % lifetime if lifetime is not None else '',
-        'princ': config.user_principal,
-        'ccache': config.user_ccache_file, }
-    os.system(cmd)
+    cmd = ['kinit',
+           '-l %s' % lifetime if lifetime is not None else '',
+           config.user_principal,
+           config.user_ccache_file]
+    subprocess.check_call(filter(lambda s: s != '', cmd))
 
 
 def init_ccache_using_keytab(lifetime=None):
-    args = {
-        'lifetime': '-l %s' % lifetime if lifetime is not None else '',
-        'keytab': config.user_keytab_file,
-        'princ': config.service_principal,
-        'ccache': config.user_ccache_file,
-    }
-    cmd = 'kinit %(lifetime)s -c %(ccache)s -k -t %(keytab)s %(princ)s' % args
-    os.system(cmd)
+    cmd = ['kinit',
+           '-l %s' % lifetime if lifetime is not None else '',
+           config.user_keytab_file,
+           config.service_principal,
+           config.user_ccache_file]
+    subprocess.check_call(filter(lambda s: s != '', cmd))
 
 
 def krb_default_cc_name():
