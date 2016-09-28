@@ -321,3 +321,17 @@ def test_KRB5CCNAME_is_not_set_if_no_need_init(get_tgt_time):
 
         # Ensure original KRB5CCNAME is not set always.
         assert 'KRB5CCNAME' not in os.environ
+
+
+@patch('krbcontext.context.get_tgt_time')
+def test_access_initialized_property(get_tgt_time):
+    get_tgt_time.return_value = CredentialTime(authtime=None,
+                                               starttime=None,
+                                               endtime=datetime.now() + timedelta(minutes=5),
+                                               renew_till=None)
+    with patch.dict(os.environ, {'fake_var': '1'}, clear=True):
+        with kctx.krbContext(using_keytab=True,
+                             principal='HTTP/localhost@PYPI.PYTHON.COM',
+                             keytab_file='/etc/httpd/conf/httpd.keytab',
+                             ccache_file='/tmp/krb5cc_pid_appname') as ctx:
+            assert not ctx.initialized

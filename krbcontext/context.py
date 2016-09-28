@@ -222,9 +222,14 @@ class krbContext(object):
         self.inited = None
         self.old_ccache = None
 
+    @property
+    def initialized(self):
+        return self.inited
+
     def __enter__(self):
         self.inited, self.old_ccache = init_ccache_if_necessary(self.context,
                                                                 **self.cleaned_options)
+        return self
 
     def __exit__(self, exc_type, exc_value, traceback):
         if self.inited:
