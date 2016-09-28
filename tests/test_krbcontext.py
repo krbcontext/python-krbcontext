@@ -7,7 +7,6 @@ import unittest
 from datetime import datetime
 from datetime import timedelta
 from mock import patch
-from mock import Mock
 
 import config
 import krbcontext.context as kctx
@@ -124,13 +123,13 @@ class CleanArgumetsUsingKeytabTest(unittest.TestCase):
         }
 
     def testPrincipalNotProvide(self):
-        self.assertRaises(NameError, kctx.clean_kwargs, self.context, self.kwargs)
+        self.assertRaises(NameError, kctx.clean_context_options, self.context, **self.kwargs)
 
     def testAllDefault(self):
         self.kwargs.update({
             'principal': config.service_principal,
         })
-        cleaned_kwargs = kctx.clean_kwargs(self.context, self.kwargs)
+        cleaned_kwargs = kctx.clean_context_options(self.context, **self.kwargs)
 
         self.assert_('principal' in cleaned_kwargs)
         self.assertEqual(cleaned_kwargs['principal'].name, config.service_principal)
@@ -151,7 +150,7 @@ class CleanArgumetsUsingKeytabTest(unittest.TestCase):
             'keytab_file': config.user_keytab_file,
         })
 
-        cleaned_kwargs = kctx.clean_kwargs(self.context, self.kwargs)
+        cleaned_kwargs = kctx.clean_context_options(self.context, **self.kwargs)
 
         self.assert_('ccache' in cleaned_kwargs)
         self.assertEqual(cleaned_kwargs['ccache'].name, config.user_ccache_file)
@@ -168,7 +167,7 @@ class CleanArgumetsAsRegularUserTest(unittest.TestCase):
         self.context = krbV.default_context()
 
     def testAllDefault(self):
-        cleaned_kwargs = kctx.clean_kwargs(self.context, {})
+        cleaned_kwargs = kctx.clean_context_options(self.context, **{})
         self.assert_('using_keytab' in cleaned_kwargs)
         self.assertFalse(cleaned_kwargs['using_keytab'])
 
@@ -186,7 +185,7 @@ class CleanArgumetsAsRegularUserTest(unittest.TestCase):
             'principal': config.user_principal,
             'ccache_file': config.user_ccache_file,
         }
-        cleaned_kwargs = kctx.clean_kwargs(self.context, kwargs)
+        cleaned_kwargs = kctx.clean_context_options(self.context, **kwargs)
 
         self.assert_('principal' in cleaned_kwargs)
         test_user_princ = cleaned_kwargs['principal']
@@ -229,7 +228,7 @@ def test_need_init(init_creds_keytab, init, get_tgt_time):
                                                starttime=None,
                                                endtime=datetime.now() - timedelta(minutes=5),
                                                renew_till=None)
-    with kctx.krbcontext(using_keytab=True,
+    with kctx.krbContext(using_keytab=True,
                          principal='HTTP/localhost@PYPI.PYTHON.COM',
                          keytab_file='/etc/httpd/conf/httpd.keytab',
                          ccache_file='/tmp/krb5cc_pid_appname'):
@@ -242,7 +241,7 @@ def test_not_necessary_to_init(get_tgt_time):
                                                starttime=None,
                                                endtime=datetime.now() + timedelta(minutes=5),
                                                renew_till=None)
-    with kctx.krbcontext(using_keytab=True,
+    with kctx.krbContext(using_keytab=True,
                          principal='HTTP/localhost@PYPI.PYTHON.COM',
                          keytab_file='/etc/httpd/conf/httpd.keytab',
                          ccache_file='/tmp/krb5cc_pid_appname'):
@@ -260,7 +259,7 @@ def test_KRB5CCNAME_is_restored_after_init(init_creds_keytab, init, get_tgt_time
 
     original_krb5ccname = '/tmp/my_krb5_cc'
     with patch.dict(os.environ, {'KRB5CCNAME': original_krb5ccname}, clear=False):
-        with kctx.krbcontext(using_keytab=True,
+        with kctx.krbContext(using_keytab=True,
                              principal='HTTP/localhost@PYPI.PYTHON.COM',
                              keytab_file='/etc/httpd/conf/httpd.keytab',
                              ccache_file='/tmp/krb5cc_pid_appname'):
@@ -279,7 +278,7 @@ def test_original_KRB5CCNAME_is_not_changed_if_no_need_init(get_tgt_time):
     original_krb5ccname = '/tmp/my_krb5_cc'
 
     with patch.dict(os.environ, {'KRB5CCNAME': original_krb5ccname}, clear=False):
-        with kctx.krbcontext(using_keytab=True,
+        with kctx.krbContext(using_keytab=True,
                              principal='HTTP/localhost@PYPI.PYTHON.COM',
                              keytab_file='/etc/httpd/conf/httpd.keytab',
                              ccache_file='/tmp/krb5cc_pid_appname'):
@@ -299,7 +298,7 @@ def test_KRB5CCNAME_is_cleared_after_init(init_creds_keytab, init, get_tgt_time)
                                                renew_till=None)
 
     with patch.dict(os.environ, {'fake_var': '1'}, clear=True):
-        with kctx.krbcontext(using_keytab=True,
+        with kctx.krbContext(using_keytab=True,
                              principal='HTTP/localhost@PYPI.PYTHON.COM',
                              keytab_file='/etc/httpd/conf/httpd.keytab',
                              ccache_file='/tmp/krb5cc_pid_appname'):
@@ -315,7 +314,7 @@ def test_KRB5CCNAME_is_not_set_if_no_need_init(get_tgt_time):
                                                endtime=datetime.now() + timedelta(minutes=5),
                                                renew_till=None)
     with patch.dict(os.environ, {'fake_var': '1'}, clear=True):
-        with kctx.krbcontext(using_keytab=True,
+        with kctx.krbContext(using_keytab=True,
                              principal='HTTP/localhost@PYPI.PYTHON.COM',
                              keytab_file='/etc/httpd/conf/httpd.keytab',
                              ccache_file='/tmp/krb5cc_pid_appname'):

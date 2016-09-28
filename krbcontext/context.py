@@ -15,7 +15,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-from contextlib import contextmanager
 from datetime import datetime
 from utils import get_tgt_time
 from utils import get_login
@@ -27,7 +26,7 @@ import sys
 import subprocess
 
 
-__all__ = ('krbcontext', 'KRB5InitError')
+__all__ = ('krbContext', 'KRB5InitError')
 
 
 ENV_KRB5CCNAME = 'KRB5CCNAME'
@@ -117,7 +116,7 @@ def is_initialize_ccache_necessary(context, ccache, principal):
     return datetime.now() >= cred_time.endtime
 
 
-def clean_kwargs(context, kwargs):
+def clean_context_options(context, **options):
     ''' Clean argument to related object
 
     In the case of using Key table, principal is required. keytab_file is
@@ -131,17 +130,17 @@ def clean_kwargs(context, kwargs):
     '''
     cleaned_kwargs = {}
 
-    using_keytab = kwargs.get('using_keytab', False)
+    using_keytab = options.get('using_keytab', False)
     if using_keytab:
         # Principal is required when using key table to initialize
         # credential cache.
-        principal_name = kwargs.get('principal', None)
+        principal_name = options.get('principal', None)
         if principal_name is None:
             raise NameError('Principal is required when using key table.')
         else:
             principal = krbV.Principal(principal_name, context=context)
             cleaned_kwargs['principal'] = principal
-        kt_name = kwargs.get('keytab_file', None)
+        kt_name = options.get('keytab_file', None)
         if kt_name is None:
             keytab = context.default_keytab()
         else:
@@ -151,14 +150,14 @@ def clean_kwargs(context, kwargs):
         # When initialize credentials cache with a regular user, clean
         # principal has different rule. It will return a valid Principal object
         # always.
-        principal_name = kwargs.get('principal', None)
+        principal_name = options.get('principal', None)
         if principal_name is None:
             principal_name = get_login()
         principal = krbV.Principal(principal_name, context=context)
         cleaned_kwargs['principal'] = principal
     cleaned_kwargs['using_keytab'] = using_keytab
 
-    ccache_file = kwargs.get('ccache_file', None)
+    ccache_file = options.get('ccache_file', None)
     if ccache_file is None:
         ccache = get_default_ccache(context)
     else:
@@ -168,7 +167,7 @@ def clean_kwargs(context, kwargs):
     return cleaned_kwargs
 
 
-def init_ccache_if_necessary(context, kwargs):
+def init_ccache_if_necessary(context, using_keytab, principal, keytab, ccache):
     ''' Initialize credential cache if necessary.
 
     The original credential cache is saved and returned for recovery in the
@@ -179,14 +178,11 @@ def init_ccache_if_necessary(context, kwargs):
     - context: current krb5 context.
     - kwargs: cleaned kwargs passed to krbcontext.
     '''
-    ccache = kwargs['ccache']
-    principal = kwargs['principal']
     old_ccache = os.getenv(ENV_KRB5CCNAME)
     init_required = is_initialize_ccache_necessary(context, ccache, principal)
     ccache_file = ccache.name
     if init_required:
-        if kwargs['using_keytab']:
-            keytab = kwargs['keytab']
+        if using_keytab:
             ccache_file = init_ccache_with_keytab(principal, keytab, ccache)
         else:
             # If client script is not running in terminal, it is impossible for
@@ -201,25 +197,42 @@ def init_ccache_if_necessary(context, kwargs):
     return (init_required, old_ccache)
 
 
-@contextmanager
-def krbcontext(**kwargs):
-    '''A context manager for Kerberos-related actions
+class krbContext(object):
+    """A context manager for Kerberos-related actions"""
 
-    using_keytab: specify to use Keytab file in Kerberos context if True,
-                  or be as a regular user.
-    kwargs: contains the necessary arguments used in kerberos context.
-            It can contain principal, keytab_file, ccache_file.
-            When you want to use Keytab file, keytab_file must be included.
-    '''
-    context = krbV.default_context()
-    kwargs = clean_kwargs(context, kwargs)
-    inited, old_ccache = init_ccache_if_necessary(context, kwargs)
+    def __init__(self, using_keytab=None, principal=None, keytab_file=None, ccache_file=None):
+        """Initialize context
 
-    try:
-        yield
-    finally:
-        if inited:
-            if old_ccache:
-                os.environ[ENV_KRB5CCNAME] = old_ccache
+        :param bool using_keytab: indicate whether to initialize credential
+        cache from a keytab.
+        :param str principal: Kerberos principal to get TGT from KDC. To
+        initialize using a regular user Kerberos account, a principal would be
+        name@EXAMPLE.COM. To initialize using a keytab, a principal would be a
+        service principal with format service_name/hostname@EXAMPLE.COM.
+        :param str keytab_file: file name of a keytab file, either absolute or
+        relative is okay.
+        :param str ccache_file: file name of a credential cache to initialize.
+        """
+        self.context = krbV.default_context()
+        self.cleaned_options = clean_context_options(self.context,
+                                                     using_keytab=using_keytab,
+                                                     principal=principal,
+                                                     keytab_file=keytab_file,
+                                                     ccache_file=ccache_file)
+        self.inited = None
+        self.old_ccache = None
+
+    def __enter__(self):
+        self.inited, self.old_ccache = init_ccache_if_necessary(self.context,
+                                                                **self.cleaned_options)
+
+    def __exit__(self, exc_type, exc_value, traceback):
+        if self.inited:
+            if self.old_ccache:
+                os.environ[ENV_KRB5CCNAME] = self.old_ccache
             else:
                 del os.environ[ENV_KRB5CCNAME]
+
+        self.inited = None
+        self.old_ccache = None
+        self.context = None
