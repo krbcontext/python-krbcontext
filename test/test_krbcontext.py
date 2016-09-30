@@ -3,11 +3,15 @@
 import krbV
 import os
 import subprocess
+import time
 import unittest
+
+import pytest
 
 from datetime import datetime
 from datetime import timedelta
 from mock import patch
+from mock import Mock
 
 import config
 import krbcontext.context as kctx
@@ -18,23 +22,6 @@ from krbcontext.utils import get_tgt_time
 from krbcontext.utils import CredentialTime
 
 
-def init_user_ccache(lifetime=None):
-    cmd = ['kinit',
-           '-l %s' % lifetime if lifetime is not None else '',
-           config.user_principal,
-           config.user_ccache_file]
-    subprocess.check_call(filter(lambda s: s != '', cmd))
-
-
-def init_ccache_using_keytab(lifetime=None):
-    cmd = ['kinit',
-           '-l %s' % lifetime if lifetime is not None else '',
-           config.user_keytab_file,
-           config.service_principal,
-           config.user_ccache_file]
-    subprocess.check_call(filter(lambda s: s != '', cmd))
-
-
 def krb_default_cc_name():
     context = krbV.default_context()
     return context.default_ccache().name
@@ -43,14 +30,6 @@ def krb_default_cc_name():
 def krb_default_keytab_name():
     context = krbV.default_context()
     return context.default_keytab().name
-
-
-def get_tgt_time_from_ccache(principal_name):
-    context = krbV.default_context()
-    principal = krbV.Principal(principal_name, context=context)
-    ccache = krbV.CCache(config.user_ccache_file, context=context)
-    ct = get_tgt_time(context, ccache, principal)
-    return ct.endtime
 
 
 class CCacheInitializationRequiredTest(unittest.TestCase):
@@ -335,3 +314,42 @@ def test_access_initialized_property(get_tgt_time):
                              keytab_file='/etc/httpd/conf/httpd.keytab',
                              ccache_file='/tmp/krb5cc_pid_appname') as ctx:
             assert not ctx.initialized
+
+
+def test_get_tgt_time():
+    context = krbV.default_context()
+    principal = krbV.Principal('cqi@EXAMPLE.COM')
+
+    expected_authtime = time.time()
+    expected_starttime = time.time()
+    expected_endtime = time.time()
+    expected_renew_till = time.time()
+
+    ccache = Mock()
+    ccache.get_credentials.return_value = (
+        None, None, (0, None),
+        (expected_authtime, expected_starttime, expected_endtime, expected_renew_till),
+        None, None, None, None, None, None)
+
+    cred_time = get_tgt_time(context, ccache, principal)
+
+    assert cred_time.authtime == datetime.fromtimestamp(expected_authtime)
+    assert cred_time.starttime == datetime.fromtimestamp(expected_starttime)
+    assert cred_time.endtime == datetime.fromtimestamp(expected_endtime)
+    assert cred_time.renew_till == datetime.fromtimestamp(expected_renew_till)
+
+
+@patch('sys.stdin')
+@patch('krbcontext.context.get_tgt_time')
+def test_init_as_regular_user_but_not_in_terminal(get_tgt_time, stdin):
+    stdin.isatty.return_value = False
+    get_tgt_time.return_value = CredentialTime(authtime=None,
+                                               starttime=None,
+                                               endtime=datetime.now() - timedelta(minutes=5),
+                                               renew_till=None)
+
+    try:
+        with kctx.krbContext():
+            pass
+    except Exception as e:
+        assert isinstance(e, IOError)

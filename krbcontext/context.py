@@ -171,8 +171,8 @@ def clean_context_options(context, **options):
     return cleaned_kwargs
 
 
-def init_ccache_if_necessary(context, using_keytab, principal, keytab, ccache):
-    ''' Initialize credential cache if necessary.
+def init_ccache_if_necessary(context, using_keytab, principal, ccache, keytab=None):
+    """Initialize credential cache if necessary
 
     The original credential cache is saved and returned for recovery in the
     final step. And the specified one is assigned to KRB5CCNAME in current
@@ -181,7 +181,7 @@ def init_ccache_if_necessary(context, using_keytab, principal, keytab, ccache):
     Arguments:
     - context: current krb5 context.
     - kwargs: cleaned kwargs passed to krbcontext.
-    '''
+    """
     old_ccache = os.getenv(ENV_KRB5CCNAME)
     init_required = is_initialize_ccache_necessary(context, ccache, principal)
     ccache_file = ccache.name
