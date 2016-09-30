@@ -48,9 +48,11 @@ def init_ccache_as_regular_user(principal, ccache):
     cmd_to_execute = cmd.split()
 
     __init_lock.acquire()
-    kinit_proc = subprocess.Popen(cmd_to_execute, stderr=subprocess.PIPE)
-    stdout_data, stderr_data = kinit_proc.communicate()
-    __init_lock.release()
+    try:
+        kinit_proc = subprocess.Popen(cmd_to_execute, stderr=subprocess.PIPE)
+        stdout_data, stderr_data = kinit_proc.communicate()
+    finally:
+        __init_lock.release()
 
     if kinit_proc.returncode > 0:
         raise KRB5InitError(stderr_data[:stderr_data.find('\n')])
@@ -59,14 +61,16 @@ def init_ccache_as_regular_user(principal, ccache):
 
 
 def init_ccache_with_keytab(principal, keytab, ccache):
-    ''' Initialize credential cache using keytab file.
+    '''Initialize credential cache using keytab file
 
     Return the filename of newly initialized credential cache.
     '''
     __init_lock.acquire()
-    ccache.init(principal)
-    ccache.init_creds_keytab(principal=principal, keytab=keytab)
-    __init_lock.release()
+    try:
+        ccache.init(principal)
+        ccache.init_creds_keytab(principal=principal, keytab=keytab)
+    finally:
+        __init_lock.release()
     return ccache.name
 
 
@@ -78,7 +82,7 @@ def get_default_ccache(context):
 
 
 def is_initialize_ccache_necessary(context, ccache, principal):
-    ''' Judge whether initializing credential cache is necessary.
+    '''Judge whether initializing credential cache is necessary
 
     In three cases, it is necessary to initialize credential cache.
 
