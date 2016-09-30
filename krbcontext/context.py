@@ -43,13 +43,11 @@ def init_ccache_as_regular_user(principal, ccache):
 
     Return the filename of newly initialized credential cache
     '''
-    args = {'principal': principal.name, 'ccache_file': ccache.name}
-    cmd = 'kinit -c %(ccache_file)s %(principal)s' % args
-    cmd_to_execute = cmd.split()
+    cmd = ['kinit', '-c', ccache.name, principal.name]
 
     __init_lock.acquire()
     try:
-        kinit_proc = subprocess.Popen(cmd_to_execute, stderr=subprocess.PIPE)
+        kinit_proc = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         stdout_data, stderr_data = kinit_proc.communicate()
     finally:
         __init_lock.release()
