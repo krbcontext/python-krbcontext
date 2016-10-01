@@ -1,2 +1,2 @@
 include LICENSE README.rst *.txt *.spec
-recursive-include tests *
+include test/config.py
