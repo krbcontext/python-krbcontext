@@ -35,14 +35,17 @@ __init_lock = Lock()
 
 # TODO: put this into standalone module
 class KRB5InitError(Exception):
-    pass
+    """Error of credential cache initialization"""
 
 
 def init_ccache_as_regular_user(principal, ccache):
-    '''Initialize credential cache as a regular user
+    """Initialize credential cache as a regular user
 
-    Return the filename of newly initialized credential cache
-    '''
+    :param krbV.Principal principal: a user's Kerberos principal.
+    :param krbV.CCache ccache: the credential cache to be initialized.
+    :return: filename of newly initialized credential cache
+    :rtype: str
+    """
     cmd = ['kinit', '-c', ccache.name, principal.name]
 
     __init_lock.acquire()
@@ -59,10 +62,14 @@ def init_ccache_as_regular_user(principal, ccache):
 
 
 def init_ccache_with_keytab(principal, keytab, ccache):
-    '''Initialize credential cache using keytab file
+    """Initialize credential cache using keytab file
 
-    Return the filename of newly initialized credential cache.
-    '''
+    :param krbV.Principal principal: a service' principal.
+    :param krbV.Keytab keytab: the keytab file containing service' principal.
+    :param krbV.CCache ccache: the credential cache to be initialized.
+    :return: filename of newly initialized credential cache.
+    :rtype: str
+    """
     __init_lock.acquire()
     try:
         ccache.init(principal)
@@ -80,23 +87,26 @@ def get_default_ccache(context):
 
 
 def is_initialize_ccache_necessary(context, ccache, principal):
-    '''Judge whether initializing credential cache is necessary
+    """Judge whether initializing credential cache is necessary
 
-    In three cases, it is necessary to initialize credential cache.
+    In following three cases, it is necessary to initialize credential cache.
 
     - Credential cache file does not exist.
     - Credential cache file has bad format.
     - TGT expires.
 
     When TGT expires, attemption that getting credentials will return error
-    ``Match credentials not found``, whose error code is KRB5_CC_NOTFOUND.
+    ``Match credentials not found``, its error code is KRB5_CC_NOTFOUND.
 
-    Arguments:
-
-    - context, current context object.
-    - ccache, the CCache object that is associated with context.
-    - principal, the principal name that is being used for getting ticket.
-    '''
+    :param krbV.Context context: Kerberos context.
+    :param krbV.CCache ccache: the credential cache from which to determine if
+    it is necessary to initialize.
+    :param krbV.Principal principal the principal name that is being used for
+    getting ticket from ``ccache``.
+    :return: a boolean that indicates if it is necessary to initialize a new
+    credential cache.
+    :rtype: bool
+    """
     try:
         cred_time = get_tgt_time(context, ccache, principal)
     except krbV.Krb5Error, err:
@@ -119,17 +129,25 @@ def is_initialize_ccache_necessary(context, ccache, principal):
 
 
 def clean_context_options(context, **options):
-    ''' Clean argument to related object
+    """Clean argument to related object
 
     In the case of using Key table, principal is required. keytab_file is
-    optional, and default key table file /etc/krb5.keytab is used if
+    optional, and default key table file ``/etc/krb5.keytab`` is used if
     keytab_file is not provided.
 
     In the case of initing as a regular user, principal is optional, and
     current user's effective name is used if principal is not provided.
 
     By default, initialize credentials cache for regular user.
-    '''
+
+    :param krbV.Context context: Kerberos context.
+    :param options: keyword arguments that contains values passed from
+    caller. Each one will be converted to corresponding krbV objects. Refer to
+    krbContext.__init__ to see each argument.
+    :return: a mapping containing each converted krbV objects. It could
+    contains keys principal, ccache, keytab, and using_keytab.
+    :rtype: dict
+    """
     cleaned_kwargs = {}
 
     using_keytab = options.get('using_keytab', False)
@@ -176,9 +194,19 @@ def init_ccache_if_necessary(context, using_keytab, principal, ccache, keytab=No
     final step. And the specified one is assigned to KRB5CCNAME in current
     process.
 
-    Arguments:
-    - context: current krb5 context.
-    - kwargs: cleaned kwargs passed to krbcontext.
+    :param krbV.Context context: Kerberos context.
+    :param bool using_keytab: whether to initialize credential cache using a
+    keytab. If not, it means to initialize use a regular user's principal.
+    :param krbV.Principal principal: the principal used to initialize
+    credential cache.
+    :param krbV.CCache ccache: the credential cache to initialize.
+    :param krbV.Keytab keytab: if using keytab to initialize, this represents
+    the keytab in the local system. If do not initialize using a keytab, this
+    argument can be omitted.
+    :raises IOError: if initialize a credential cache using a regular user's
+    principal, and the script that needs a well-initialized Kerberos context
+    does not run in a terminal, ``IOError`` will be raised. That is because it
+    is not possible for a human to enter his or her password generally.
     """
     old_ccache = os.getenv(ENV_KRB5CCNAME)
     init_required = is_initialize_ccache_necessary(context, ccache, principal)
@@ -226,14 +254,17 @@ class krbContext(object):
 
     @property
     def initialized(self):
+        """Indicate whether credential cache has been initialized"""
         return self.inited
 
     def __enter__(self):
+        """Initialize credential cache if necessary before enter krbcontext"""
         self.inited, self.old_ccache = init_ccache_if_necessary(self.context,
                                                                 **self.cleaned_options)
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
+        """Clean krbcontext"""
         if self.inited:
             if self.old_ccache:
                 os.environ[ENV_KRB5CCNAME] = self.old_ccache
