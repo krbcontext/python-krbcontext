@@ -9,7 +9,7 @@ dist/
 .cache/
 htmlcov/
 README.html
-doc/build/
+docs/build/
 
 tags
 TAGS
