@@ -112,7 +112,7 @@ locates ``/tmp/krb5cc_xxx``, like above.
 ::
 
     with krbcontext(using_keytab=True,
-                    principal='HTTP/localhost@PYPI.PYTHON.COM'):
+                    principal='HTTP/localhost@PYPI.PYTHON.COM',
                     keytab_file='/etc/httpd/conf/httpd.keytab',
                     ccache_file='/tmp/krb5cc_pid_appname'):
         pass
