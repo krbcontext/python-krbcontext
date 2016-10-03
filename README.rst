@@ -8,7 +8,7 @@ developers to put codes, which needs kerberos environment, into a kerberos conte
 One important thing is that you should configure /etc/krb5.conf correctly before
 doing anything with Kerberos.
 
-krbcontext will initialize the credential cache when be invoked each time.
+``krbcontext`` will initialize the credential cache when be invoked each time.
 
 You can use krbcontext with a regular Kerberos user or a service Keytab file.
 When you work as a regular user, krbcontext prompts you to enter password
@@ -22,8 +22,9 @@ the arguments passed to krbcontext are mapped to these concepts.
 Lazy initialization
 -------------------
 
-Before running client's code, krbcontext checks credential krbtgt/REALM@REALM in
-credentials cache locally to see whether it is necessary to be initialized.
+Before running client's code, ``krbcontext`` checks credential
+``krbtgt/REALM@REALM`` in default or specified credential cache to see if it is
+necessary to be initialized.
 
 Thread-safe
 -----------
@@ -36,13 +37,18 @@ credentials cache file name for each thread individually.
 Dependencies
 ------------
 
-krbcontext depends on python-krbV. This is a Python extension module for Kerberos 5.
-It is hosted in fedorahosted.org, you can follow this URL to get more details.
-https://fedorahosted.org/python-krbV/
+krbcontext depends on python-krbV_. This is a Python extension module for
+Kerberos 5.
 
-If you choose to install krbcontext using the RPM distribution, the dependency will
-be solved automatically. On the other hand, if easy_install or pip is used, it is
-necessary to run yum or build from source to install python-krbV first.
+If you install ``krbcontext`` using RPM, dependency will be resolved
+automatically. If easy_install or pip is used, it is necessary to install
+``python-krbV`` manually from software repository. For example,
+
+::
+
+   sudo dnf install python-krbV
+
+.. _python-krbV: https://fedorahosted.org/python-krbV/
 
 Usage
 -----
@@ -82,7 +88,7 @@ As a regular user
 
 This is the most simplest way. It uses default values. It gets current effective
 user name rather than login name, and initialize the default credential cache,
-``/tmp/krb5cc_xxx``, where xxx is the current user ID returned by os.getuid method.
+``/tmp/krb5cc_xxx``, where xxx is the current user ID returned by ``os.getuid`` method.
 
 Specifying custom values
 
@@ -118,4 +124,4 @@ locates ``/tmp/krb5cc_xxx``, like above.
         pass
 
 If you have another Keytab that is be elsewhere and a credential cache for
-special purpose, you may pass the keytab_file and ccache_file.
+special purpose, you may pass the ``keytab_file`` and ``ccache_file``.
