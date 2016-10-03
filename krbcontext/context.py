@@ -100,11 +100,11 @@ def is_initialize_ccache_necessary(context, ccache, principal):
 
     :param krbV.Context context: Kerberos context.
     :param krbV.CCache ccache: the credential cache from which to determine if
-    it is necessary to initialize.
-    :param krbV.Principal principal the principal name that is being used for
-    getting ticket from ``ccache``.
+        it is necessary to initialize.
+    :param krbV.Principal principal: the principal name that is being used for
+        getting ticket from ``ccache``.
     :return: a boolean that indicates if it is necessary to initialize a new
-    credential cache.
+        credential cache.
     :rtype: bool
     """
     try:
@@ -142,10 +142,10 @@ def clean_context_options(context, **options):
 
     :param krbV.Context context: Kerberos context.
     :param options: keyword arguments that contains values passed from
-    caller. Each one will be converted to corresponding krbV objects. Refer to
-    krbContext.__init__ to see each argument.
+        caller. Each one will be converted to corresponding krbV objects. Refer
+        to ``krbContext.__init__`` to see each argument.
     :return: a mapping containing each converted krbV objects. It could
-    contains keys principal, ccache, keytab, and using_keytab.
+        contains keys principal, ccache, keytab, and using_keytab.
     :rtype: dict
     """
     cleaned_kwargs = {}
@@ -191,22 +191,22 @@ def init_ccache_if_necessary(context, using_keytab, principal, ccache, keytab=No
     """Initialize credential cache if necessary
 
     The original credential cache is saved and returned for recovery in the
-    final step. And the specified one is assigned to KRB5CCNAME in current
+    final step. And the specified one is assigned to ``KRB5CCNAME`` in current
     process.
 
     :param krbV.Context context: Kerberos context.
     :param bool using_keytab: whether to initialize credential cache using a
-    keytab. If not, it means to initialize use a regular user's principal.
-    :param krbV.Principal principal: the principal used to initialize
-    credential cache.
+        keytab. If not, it means to initialize use a regular user's principal.
+    :param krbV.Principal principal: the principal used to initialize credential
+        cache.
     :param krbV.CCache ccache: the credential cache to initialize.
     :param krbV.Keytab keytab: if using keytab to initialize, this represents
-    the keytab in the local system. If do not initialize using a keytab, this
-    argument can be omitted.
+        the keytab in the local system. If do not initialize using a keytab,
+        this argument can be omitted.
     :raises IOError: if initialize a credential cache using a regular user's
-    principal, and the script that needs a well-initialized Kerberos context
-    does not run in a terminal, ``IOError`` will be raised. That is because it
-    is not possible for a human to enter his or her password generally.
+        principal, and the script that needs a well-initialized Kerberos context
+        does not run in a terminal, ``IOError`` will be raised. That is because
+        it is not possible for a human to enter his or her password generally.
     """
     old_ccache = os.getenv(ENV_KRB5CCNAME)
     init_required = is_initialize_ccache_necessary(context, ccache, principal)
@@ -234,13 +234,13 @@ class krbContext(object):
         """Initialize context
 
         :param bool using_keytab: indicate whether to initialize credential
-        cache from a keytab.
+            cache from a keytab.
         :param str principal: Kerberos principal to get TGT from KDC. To
-        initialize using a regular user Kerberos account, a principal would be
-        name@EXAMPLE.COM. To initialize using a keytab, a principal would be a
-        service principal with format service_name/hostname@EXAMPLE.COM.
+            initialize using a regular user Kerberos account, a principal would be
+            name@EXAMPLE.COM. To initialize using a keytab, a principal would be a
+            service principal with format service_name/hostname@EXAMPLE.COM.
         :param str keytab_file: file name of a keytab file, either absolute or
-        relative is okay.
+            relative is okay.
         :param str ccache_file: file name of a credential cache to initialize.
         """
         self.context = krbV.default_context()

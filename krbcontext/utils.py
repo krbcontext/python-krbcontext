@@ -21,10 +21,20 @@ import krbV
 import os
 import pwd
 
+__all__ = (
+    'CredentialTime',
+    'build_tgt_ticket',
+    'get_login',
+    'get_tgt_time',
+)
+
 
 class CredentialTime(object):
+    """Used internally holding credential time got from ccache"""
 
     def __init__(self, authtime, starttime, endtime, renew_till):
+        """Initialize credential time"""
+
         self.authtime = authtime
         self.starttime = starttime
         self.endtime = endtime
@@ -32,7 +42,7 @@ class CredentialTime(object):
 
 
 def get_login():
-    ''' Get current effective user name '''
+    """Get current effective user name"""
     return pwd.getpwuid(os.getuid()).pw_name
 
 
@@ -41,13 +51,16 @@ def build_tgt_ticket(principal):
 
 
 def get_tgt_time(context, ccache, principal):
-    ''' Get specified TGT's credential time.
+    """Get specified TGT's credential time
 
-    Arguments:
-    - context, current context object.
-    - ccache, the CCache object that is associated with context.
-    - principal, the principal that is being used for getting ticket.
-    '''
+    :param krbV.Context context: Kerberos context object.
+    :param krbV.CCache ccache: the CCache object that is associated with context.
+    :param krbV.Principal principal: the principal that is being used for
+        getting ticket.
+    :return: instance of CredentialTime holding credential's ``authtime``,
+        ``starttime``, ``endtime``, and ``renew_till``.
+    :rtype: CredentialTime
+    """
     tgt_princ = krbV.Principal(build_tgt_ticket(principal), context=context)
     creds = (principal, tgt_princ,
              (0, None), (0, 0, 0, 0), None, None, None, None,
