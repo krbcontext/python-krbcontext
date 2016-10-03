@@ -1,6 +1,6 @@
 .. image:: https://readthedocs.org/projects/krbcontext/badge/?version=latest
-:target: http://krbcontext.readthedocs.io/en/latest/?badge=latest
-:alt: Documentation Status
+   :target: http://krbcontext.readthedocs.io/en/latest/?badge=latest
+   :alt: Documentation Status
 
 Please refer to `krbcontext.readthedocs.io`_
 
