@@ -274,3 +274,6 @@ class krbContext(object):
         self.inited = None
         self.old_ccache = None
         self.context = None
+
+# Backward compatibility
+krbcontext = krbContext

@@ -2,11 +2,8 @@
 
 import krbV
 import os
-import subprocess
 import time
 import unittest
-
-import pytest
 
 from datetime import datetime
 from datetime import timedelta
@@ -32,32 +29,38 @@ def krb_default_keytab_name():
     return context.default_keytab().name
 
 
+def get_fake_cred_time(expired):
+    assert isinstance(expired, bool)
+    delta = 5
+    if expired:
+        delta *= -1
+    endtime = datetime.now() + timedelta(minutes=delta)
+    return CredentialTime(authtime=None, starttime=None, endtime=endtime, renew_till=None)
+
+
+class GetTGTTimeError(Exception):
+    """Used for running tests only"""
+
+
 class CCacheInitializationRequiredTest(unittest.TestCase):
+
+    def setUp(self):
+        self.context = krbV.default_context()
+        self.ccache = krbV.CCache(config.user_ccache_file, context=self.context)
+        self.principal = krbV.Principal(config.service_principal, context=self.context)
 
     @patch('krbcontext.context.get_tgt_time')
     def test_init_if_ccache_is_expired(self, get_tgt_time):
-        get_tgt_time.return_value = CredentialTime(authtime=None,
-                                                   starttime=None,
-                                                   endtime=datetime.now() - timedelta(minutes=5),
-                                                   renew_till=None)
+        get_tgt_time.return_value = get_fake_cred_time(expired=True)
 
-        context = krbV.default_context()
-        ccache = krbV.CCache(config.user_ccache_file, context=context)
-        principal = krbV.Principal(config.service_principal, context=context)
-        result = is_initialize_ccache_necessary(context, ccache, principal)
+        result = is_initialize_ccache_necessary(self.context, self.ccache, self.principal)
         self.assertTrue(result)
 
     @patch('krbcontext.context.get_tgt_time')
     def test_dont_init_ccache_is_not_expired(self, get_tgt_time):
-        get_tgt_time.return_value = CredentialTime(authtime=None,
-                                                   starttime=None,
-                                                   endtime=datetime.now() + timedelta(minutes=5),
-                                                   renew_till=None)
+        get_tgt_time.return_value = get_fake_cred_time(expired=False)
 
-        context = krbV.default_context()
-        ccache = krbV.CCache(config.user_ccache_file, context=context)
-        principal = krbV.Principal(config.service_principal, context=context)
-        result = is_initialize_ccache_necessary(context, ccache, principal)
+        result = is_initialize_ccache_necessary(self.context, self.ccache, self.principal)
         self.assertFalse(result)
 
     def test_ccache_is_not_valid(self):
@@ -68,11 +71,24 @@ class CCacheInitializationRequiredTest(unittest.TestCase):
         for err_code in err_codes:
             with patch('krbcontext.context.get_tgt_time',
                        side_effect=krbV.Krb5Error(err_code, '')):
-                context = krbV.default_context()
-                ccache = krbV.CCache(config.user_ccache_file, context=context)
-                principal = krbV.Principal(config.service_principal, context=context)
-                result = is_initialize_ccache_necessary(context, ccache, principal)
+                result = is_initialize_ccache_necessary(self.context, self.ccache, self.principal)
                 self.assertTrue(result)
+
+    def test_error_when_get_cred_time(self):
+        with patch('krbcontext.context.get_tgt_time', side_effect=GetTGTTimeError()):
+            self.assertRaises(GetTGTTimeError, is_initialize_ccache_necessary,
+                              self.context, self.ccache, self.principal)
+
+    def test_non_monitored_error_occurs(self):
+        # krbV.KRB5_CC_NOT_KTYPE is choosed for raising an non-monitored error,
+        # which means an error is raised but that is not treated as a flag
+        # indicating the credential cache should be initialized.
+        # Thus, for running this test, any other errors could be used as long
+        # as it is not known errors by krbcontext.
+        with patch('krbcontext.context.get_tgt_time',
+                   side_effect=krbV.Krb5Error(krbV.KRB5_CC_NOT_KTYPE, '')):
+            self.assertRaises(krbV.Krb5Error, is_initialize_ccache_necessary,
+                              self.context, self.ccache, self.principal)
 
 
 class GetDefaultCCacheTest(unittest.TestCase):
@@ -176,180 +192,127 @@ class CleanArgumetsAsRegularUserTest(unittest.TestCase):
 
 class InitAsRegularUserTest(unittest.TestCase):
 
-    def setUp(self):
-        self.context = krbV.default_context()
-        self.principal = krbV.Principal(config.user_principal, context=self.context)
-        self.ccache = krbV.CCache(config.user_ccache_file, context=self.context)
-
+    @patch('sys.stdin')
+    @patch('krbcontext.context.get_tgt_time')
     @patch('krbcontext.context.subprocess.Popen')
-    def test_init_successfully(self, Popen):
-        Popen.return_value.returncode = 0
+    def test_init(self, Popen, get_tgt_time, stdin):
+        get_tgt_time.return_value = get_fake_cred_time(expired=True)
         Popen.return_value.communicate.return_value = ('', '')
+        Popen.return_value.returncode = 0
+        stdin.isatty.return_value = True
 
-        cc_name = kctx.init_ccache_as_regular_user(self.principal, self.ccache)
-        self.assertEqual(self.ccache.name, cc_name)
-
-    @patch('krbcontext.context.subprocess.Popen')
-    def test_init_command_fails(self, Popen):
-        Popen.return_value.returncode = 1
-        Popen.return_value.communicate.return_value = ('', 'something goes wrong.')
-
-        self.assertRaises(KRB5InitError,
-                          kctx.init_ccache_as_regular_user, self.principal, self.ccache)
-
-
-@patch('krbcontext.context.get_tgt_time')
-@patch('krbcontext.context.krbV.CCache.init')
-@patch('krbcontext.context.krbV.CCache.init_creds_keytab')
-def test_need_init(init_creds_keytab, init, get_tgt_time):
-    get_tgt_time.return_value = CredentialTime(authtime=None,
-                                               starttime=None,
-                                               endtime=datetime.now() - timedelta(minutes=5),
-                                               renew_till=None)
-    with kctx.krbContext(using_keytab=True,
-                         principal='HTTP/localhost@PYPI.PYTHON.COM',
-                         keytab_file='/etc/httpd/conf/httpd.keytab',
-                         ccache_file='/tmp/krb5cc_pid_appname'):
-        pass
-
-
-@patch('krbcontext.context.get_tgt_time')
-def test_not_necessary_to_init(get_tgt_time):
-    get_tgt_time.return_value = CredentialTime(authtime=None,
-                                               starttime=None,
-                                               endtime=datetime.now() + timedelta(minutes=5),
-                                               renew_till=None)
-    with kctx.krbContext(using_keytab=True,
-                         principal='HTTP/localhost@PYPI.PYTHON.COM',
-                         keytab_file='/etc/httpd/conf/httpd.keytab',
-                         ccache_file='/tmp/krb5cc_pid_appname'):
-        pass
-
-
-@patch('krbcontext.context.get_tgt_time')
-@patch('krbcontext.context.krbV.CCache.init')
-@patch('krbcontext.context.krbV.CCache.init_creds_keytab')
-def test_KRB5CCNAME_is_restored_after_init(init_creds_keytab, init, get_tgt_time):
-    get_tgt_time.return_value = CredentialTime(authtime=None,
-                                               starttime=None,
-                                               endtime=datetime.now() - timedelta(minutes=5),
-                                               renew_till=None)
-
-    original_krb5ccname = '/tmp/my_krb5_cc'
-    with patch.dict(os.environ, {'KRB5CCNAME': original_krb5ccname}, clear=False):
-        with kctx.krbContext(using_keytab=True,
-                             principal='HTTP/localhost@PYPI.PYTHON.COM',
-                             keytab_file='/etc/httpd/conf/httpd.keytab',
-                             ccache_file='/tmp/krb5cc_pid_appname'):
-            assert '/tmp/krb5cc_pid_appname' == os.environ['KRB5CCNAME']
-
-        assert original_krb5ccname == os.environ['KRB5CCNAME']
-
-
-@patch('krbcontext.context.get_tgt_time')
-def test_original_KRB5CCNAME_is_not_changed_if_no_need_init(get_tgt_time):
-    get_tgt_time.return_value = CredentialTime(authtime=None,
-                                               starttime=None,
-                                               endtime=datetime.now() + timedelta(minutes=5),
-                                               renew_till=None)
-
-    original_krb5ccname = '/tmp/my_krb5_cc'
-
-    with patch.dict(os.environ, {'KRB5CCNAME': original_krb5ccname}, clear=False):
-        with kctx.krbContext(using_keytab=True,
-                             principal='HTTP/localhost@PYPI.PYTHON.COM',
-                             keytab_file='/etc/httpd/conf/httpd.keytab',
-                             ccache_file='/tmp/krb5cc_pid_appname'):
-            assert original_krb5ccname == os.environ['KRB5CCNAME']
-
-        # Ensure original KRB5CCNAME is not changed always.
-        assert original_krb5ccname == os.environ['KRB5CCNAME']
-
-
-@patch('krbcontext.context.get_tgt_time')
-@patch('krbcontext.context.krbV.CCache.init')
-@patch('krbcontext.context.krbV.CCache.init_creds_keytab')
-def test_KRB5CCNAME_is_cleared_after_init(init_creds_keytab, init, get_tgt_time):
-    get_tgt_time.return_value = CredentialTime(authtime=None,
-                                               starttime=None,
-                                               endtime=datetime.now() - timedelta(minutes=5),
-                                               renew_till=None)
-
-    with patch.dict(os.environ, {'fake_var': '1'}, clear=True):
-        with kctx.krbContext(using_keytab=True,
-                             principal='HTTP/localhost@PYPI.PYTHON.COM',
-                             keytab_file='/etc/httpd/conf/httpd.keytab',
-                             ccache_file='/tmp/krb5cc_pid_appname'):
-            assert '/tmp/krb5cc_pid_appname' == os.environ['KRB5CCNAME']
-
-        assert 'KRB5CCNAME' not in os.environ
-
-
-@patch('krbcontext.context.get_tgt_time')
-def test_KRB5CCNAME_is_not_set_if_no_need_init(get_tgt_time):
-    get_tgt_time.return_value = CredentialTime(authtime=None,
-                                               starttime=None,
-                                               endtime=datetime.now() + timedelta(minutes=5),
-                                               renew_till=None)
-    with patch.dict(os.environ, {'fake_var': '1'}, clear=True):
-        with kctx.krbContext(using_keytab=True,
-                             principal='HTTP/localhost@PYPI.PYTHON.COM',
-                             keytab_file='/etc/httpd/conf/httpd.keytab',
-                             ccache_file='/tmp/krb5cc_pid_appname'):
-            assert 'KRB5CCNAME' not in os.environ
-
-        # Ensure original KRB5CCNAME is not set always.
-        assert 'KRB5CCNAME' not in os.environ
-
-
-@patch('krbcontext.context.get_tgt_time')
-def test_access_initialized_property(get_tgt_time):
-    get_tgt_time.return_value = CredentialTime(authtime=None,
-                                               starttime=None,
-                                               endtime=datetime.now() + timedelta(minutes=5),
-                                               renew_till=None)
-    with patch.dict(os.environ, {'fake_var': '1'}, clear=True):
-        with kctx.krbContext(using_keytab=True,
-                             principal='HTTP/localhost@PYPI.PYTHON.COM',
-                             keytab_file='/etc/httpd/conf/httpd.keytab',
-                             ccache_file='/tmp/krb5cc_pid_appname') as ctx:
-            assert not ctx.initialized
-
-
-def test_get_tgt_time():
-    context = krbV.default_context()
-    principal = krbV.Principal('cqi@EXAMPLE.COM')
-
-    expected_authtime = time.time()
-    expected_starttime = time.time()
-    expected_endtime = time.time()
-    expected_renew_till = time.time()
-
-    ccache = Mock()
-    ccache.get_credentials.return_value = (
-        None, None, (0, None),
-        (expected_authtime, expected_starttime, expected_endtime, expected_renew_till),
-        None, None, None, None, None, None)
-
-    cred_time = get_tgt_time(context, ccache, principal)
-
-    assert cred_time.authtime == datetime.fromtimestamp(expected_authtime)
-    assert cred_time.starttime == datetime.fromtimestamp(expected_starttime)
-    assert cred_time.endtime == datetime.fromtimestamp(expected_endtime)
-    assert cred_time.renew_till == datetime.fromtimestamp(expected_renew_till)
-
-
-@patch('sys.stdin')
-@patch('krbcontext.context.get_tgt_time')
-def test_init_as_regular_user_but_not_in_terminal(get_tgt_time, stdin):
-    stdin.isatty.return_value = False
-    get_tgt_time.return_value = CredentialTime(authtime=None,
-                                               starttime=None,
-                                               endtime=datetime.now() - timedelta(minutes=5),
-                                               renew_till=None)
-
-    try:
         with kctx.krbContext():
             pass
-    except Exception as e:
-        assert isinstance(e, IOError)
+
+    @patch('sys.stdin')
+    @patch('krbcontext.context.subprocess.Popen')
+    def test_init_command_fails(self, Popen, stdin):
+        Popen.return_value.returncode = 1
+        Popen.return_value.communicate.return_value = ('', 'something goes wrong.')
+        stdin.isatty.return_value = True
+
+        try:
+            with kctx.krbContext():
+                pass
+        except Exception as e:
+            self.assertTrue(isinstance(e, KRB5InitError))
+
+    @patch('sys.stdin')
+    @patch('krbcontext.context.get_tgt_time')
+    def test_not_in_terminal(self, get_tgt_time, stdin):
+        stdin.isatty.return_value = False
+        get_tgt_time.return_value = get_fake_cred_time(expired=True)
+
+        try:
+            with kctx.krbContext():
+                pass
+        except Exception as e:
+            self.assertTrue(isinstance(e, IOError))
+
+
+class InitUsingKeytab(unittest.TestCase):
+
+    @patch('krbcontext.context.get_tgt_time')
+    def test_no_need_init(self, get_tgt_time):
+        get_tgt_time.return_value = get_fake_cred_time(expired=False)
+
+        with patch.dict(os.environ, {}, clear=True):
+            with kctx.krbContext(using_keytab=True,
+                                 principal='HTTP/www.example.com@EXAMPLE.COM') as context:
+                self.assertFalse(context.initialized)
+                self.assertTrue('KRB5CCNAME' not in os.environ)
+            self.assertTrue('KRB5CCNAME' not in os.environ)
+
+    @patch('krbV.CCache.init')
+    @patch('krbV.CCache.init_creds_keytab')
+    def assert_krbContext(self, init_creds_keytab, init):
+        with kctx.krbContext(using_keytab=True,
+                             principal='HTTP/www.example@EXAMPLE.COM',
+                             keytab_file='/etc/httpd/conf/httpd.keytab',
+                             ccache_file='/tmp/krb5cc_app') as context:
+            self.assertTrue(context.initialized)
+            self.assertEqual('/tmp/krb5cc_app', os.environ['KRB5CCNAME'])
+
+    @patch('krbcontext.context.get_tgt_time')
+    def test_init(self, get_tgt_time):
+        get_tgt_time.return_value = get_fake_cred_time(expired=True)
+
+        with patch.dict(os.environ, {}, clear=True):
+            self.assert_krbContext()
+            self.assertTrue('KRB5CCNAME' not in os.environ)
+
+        original_krb5ccname = '/tmp/krb5cc_system'
+        with patch.dict(os.environ, {'KRB5CCNAME': original_krb5ccname}, clear=True):
+            self.assert_krbContext()
+            self.assertEqual(original_krb5ccname, os.environ['KRB5CCNAME'])
+
+
+class BackwardCompabilityTest(unittest.TestCase):
+    """Test backward compatible name krbcontext"""
+
+    @patch('krbcontext.context.get_tgt_time')
+    def test_krbcontext(self, get_tgt_time):
+        get_tgt_time.return_value = get_fake_cred_time(expired=False)
+
+        with kctx.krbcontext(using_keytab=True,
+                             principal='HTTP/www.example.com@EXAMPLE.COM'):
+            pass
+
+
+class krbContextPropertiesAccessibleTest(unittest.TestCase):
+
+    @patch('krbcontext.context.get_tgt_time')
+    def test_access_initialized_property(self, get_tgt_time):
+        get_tgt_time.return_value = get_fake_cred_time(expired=False)
+
+        with patch.dict(os.environ, {'fake_var': '1'}, clear=True):
+            with kctx.krbContext(using_keytab=True,
+                                 principal='HTTP/localhost@PYPI.PYTHON.COM',
+                                 keytab_file='/etc/httpd/conf/httpd.keytab',
+                                 ccache_file='/tmp/krb5cc_pid_appname') as ctx:
+                self.assertFalse(ctx.initialized)
+
+
+class GetTGTTimeTest(unittest.TestCase):
+
+    def test_get_tgt_time(self):
+        context = krbV.default_context()
+        principal = krbV.Principal('cqi@EXAMPLE.COM')
+
+        expected_authtime = time.time()
+        expected_starttime = time.time()
+        expected_endtime = time.time()
+        expected_renew_till = time.time()
+
+        ccache = Mock()
+        ccache.get_credentials.return_value = (
+            None, None, (0, None),
+            (expected_authtime, expected_starttime, expected_endtime, expected_renew_till),
+            None, None, None, None, None, None)
+
+        cred_time = get_tgt_time(context, ccache, principal)
+
+        self.assertEqual(datetime.fromtimestamp(expected_authtime), cred_time.authtime)
+        self.assertEqual(datetime.fromtimestamp(expected_starttime), cred_time.starttime)
+        self.assertEqual(datetime.fromtimestamp(expected_endtime), cred_time.endtime)
+        self.assertEqual(datetime.fromtimestamp(expected_renew_till), cred_time.renew_till)
