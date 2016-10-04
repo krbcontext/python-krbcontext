@@ -6,7 +6,7 @@ from setuptools import setup, find_packages
 def get_long_description():
     return '''%s
 
-%s''' % (open('README.rst', 'r').read(), open('CHANGES.txt', 'r').read())
+%s''' % (open('README.rst', 'r').read(), open('CHANGES', 'r').read())
 
 setup(
     name='krbcontext',

@@ -1,2 +1,2 @@
-include LICENSE README.rst *.txt *.spec
+include LICENSE README.rst CHANGES *.spec
 include test/config.py
