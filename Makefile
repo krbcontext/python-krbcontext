@@ -7,3 +7,7 @@ sdist:
 
 rpm: sdist
 	@rpmbuild -D '_sourcedir $(realpath dist)' -ba python-krbcontext.spec
+
+check:
+	@flake8 krbcontext/ test/
+	@python setup.py test
