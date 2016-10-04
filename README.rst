@@ -4,4 +4,4 @@
 
 Please refer to `krbcontext.github.io`_
 
-.. _krbcontext.readthedocs.io: https://krbcontext.github.io/
+.. _krbcontext.github.io: https://krbcontext.github.io/
