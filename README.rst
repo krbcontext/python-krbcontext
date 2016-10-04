@@ -2,6 +2,6 @@
    :target: http://krbcontext.readthedocs.io/en/latest/?badge=latest
    :alt: Documentation Status
 
-Please refer to `krbcontext.readthedocs.io`_
+Please refer to `krbcontext.github.io`_
 
-.. _krbcontext.readthedocs.io: http://krbcontext.readthedocs.io/en/latest/
+.. _krbcontext.readthedocs.io: https://krbcontext.github.io/
