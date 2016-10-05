@@ -17,7 +17,7 @@ setup(
     license='GPL',
     author='Chenxiong Qi',
     author_email='cqi@redhat.com',
-    url='https://github.com/tkdchen/python-krbcontext',
+    url='https://github.com/krbcontext/krbcontext',
 
     packages=find_packages(),
 
