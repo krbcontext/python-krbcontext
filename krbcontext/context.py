@@ -109,7 +109,7 @@ def is_initialize_ccache_necessary(context, ccache, principal):
     """
     try:
         cred_time = get_tgt_time(context, ccache, principal)
-    except krbV.Krb5Error, err:
+    except krbV.Krb5Error as err:
         # Credentials cache does not exist. In this case, initialize
         # credential cache is required.
         monitor_errors = (krbV.KRB5_FCC_NOFILE,
