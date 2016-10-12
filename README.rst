@@ -27,4 +27,4 @@ Contact
 
 If you have any issues, please `report one`_.
 
-.. _report one: https://github.com/krbcontext/krbcontext/issues/new
+.. _report one: https://github.com/krbcontext/python-krbcontext/issues/new
