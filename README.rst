@@ -7,9 +7,8 @@ krbcontext
 .. image:: https://codecov.io/gh/krbcontext/python-krbcontext/branch/master/graph/badge.svg
   :target: https://codecov.io/gh/krbcontext/python-krbcontext
 
-``krbcontext`` does the initialization of credential cache (ticket file) in a
-kerberos-related context. It provides a context manager that allows developers
-to put codes inside, which needs a Kerberos environment.
+``krbcontext`` provides a Kerberos context that you can put code inside, which
+requires a valid ticket in credential cache.
 
 Documentation
 -------------
@@ -21,16 +20,21 @@ Usage and API can be found from `krbcontext.github.io`_.
 Contribution
 ------------
 
-Welcome your contribution. Before make a pull request, please make your code
-pass all checks. Run
+Welcome contributions, whatever idea, issue report, or a patch. Before making a
+pull request, please make sure your code passes checks. Run
 
 ::
 
-  make check
+  tox
 
-Contact
--------
+Report an Issue
+---------------
 
 If you have any issues, please `report one`_.
 
 .. _report one: https://github.com/krbcontext/python-krbcontext/issues/new
+
+IRC
+---
+
+#krbcontext on freenode.net
