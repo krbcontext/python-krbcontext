@@ -1,8 +1,11 @@
 krbcontext
 ==========
 
-.. image:: https://travis-ci.org/tkdchen/python-krbcontext.svg?branch=master
-    :target: https://travis-ci.org/tkdchen/python-krbcontext
+.. image:: https://travis-ci.org/krbcontext/python-krbcontext.svg?branch=master
+    :target: https://travis-ci.org/krbcontext/python-krbcontext
+
+.. image:: https://codecov.io/gh/krbcontext/python-krbcontext/branch/master/graph/badge.svg
+  :target: https://codecov.io/gh/krbcontext/python-krbcontext
 
 ``krbcontext`` does the initialization of credential cache (ticket file) in a
 kerberos-related context. It provides a context manager that allows developers

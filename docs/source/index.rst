@@ -8,8 +8,11 @@ Welcome to krbcontext's documentation!
 
 Contents:
 
-.. image:: https://travis-ci.org/tkdchen/python-krbcontext.svg?branch=master
-    :target: https://travis-ci.org/tkdchen/python-krbcontext
+.. image:: https://travis-ci.org/krbcontext/python-krbcontext.svg?branch=master
+    :target: https://travis-ci.org/krbcontext/python-krbcontext
+
+.. image:: https://codecov.io/gh/krbcontext/python-krbcontext/branch/master/graph/badge.svg
+  :target: https://codecov.io/gh/krbcontext/python-krbcontext
 
 .. toctree::
    :maxdepth: 2
