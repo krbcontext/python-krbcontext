@@ -13,6 +13,7 @@ Contents:
 
    usage
    api
+   release-notes
 
 
 Indices and tables

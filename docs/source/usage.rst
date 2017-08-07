@@ -1,89 +1,54 @@
 Using krbcontext
 ================
 
-``krbcontext`` does the initialization of credential cache (ticket file) in a
-kerberos-related context. It provides a context manager that allows developers
-to put codes inside, which needs a Kerberos environment.
+``krbcontext`` provides a Kerberos context that you can put code inside, which
+requires a valid ticket in credential cache.
 
-As a general step before invoking any Kerberos commands and APIs, you should
-configure your Kerberos environment in file ``/etc/krb5.conf`` properly.
+``krbcontext`` is able to initialize credential cache automatically on behalf
+of you according to the options you specify. It can initialize with keytab or a
+regular user's Kerberos name and password.
 
-You can use ``krbcontext`` with a regular Kerberos user or a service Keytab
-file. When you work as a regular user, ``krbcontext`` prompts you to enter
-password of your Kerberos account. Whatever in which way, it accepts a set of
-default values and specified values.
+You can use ``krbcontext`` as a context manager with ``with`` statement, or
+call API directly to check credential cache and even initialize by yourself.  
 
-There are several concepts you must know before using ``krbcontext``, principal
-of user and service, service Keytab file, and credential cache (ticket
-file). Therefore, the arguments passed to ``krbcontext`` are mapped to these
-concepts.
-
-Lazy initialization
+Lazy Initialization
 -------------------
 
-Before running client's code, ``krbcontext`` checks credential
-``krbtgt/REALM@REALM`` in default or specified credential cache to see if it is
-necessary to be initialized.
+Current version of ``krbcontext`` is able to detect whether specified cache is
+a valid credential cache file and contains valid and non-expired ticket. So,
+only initializes credential cache when it is necessary.
 
 Thread-safe
 -----------
 
-If you want krbcontext to initialize credential in Kerberos standard
-credenticial cache, or pass a file name to argument ``ccache_file`` explicitly,
-krbcontext is thread-safe. However, it is still suggestion that you pass
-credentials cache file name for each thread individually.
+``krbcontext`` manages its own threading lock, and it is acquired when entering
+context and gets released when exit. It is recommended that you just put the
+necessary code, which requires a valid Kerberos ticket, inside context.
 
 Dependencies
 ------------
 
-``krbcontext`` depends on python-krbV_, that is a Python extension module for
-Kerberos 5.
+``krbcontext`` requires python-gssapi_.
 
-If you install ``krbcontext`` using RPM, dependency will be resolved
-automatically. If easy_install or pip is used, it is necessary to install
-``python-krbV`` manually from software repository. For example,
-
-::
-
-   sudo dnf install python-krbV
-
-As of writing this document, ``python-krbV`` is only available as RPM package
-in Fedora, CentOS, and probably RHEL. If you are using non-RPM distributions,
-feel free to build it for yourself. Don't be afraid, it should be easy
-enough. Please refer to the project's documentation, how to build it is beyond
-the scope of this document.
-
-.. _python-krbV: https://fedorahosted.org/python-krbV/
+.. _python-gssapi: https://github.com/pythongssapi/python-gssapi
 
 Installation
 ------------
 
 Using `virtual environment`_ ::
 
-  sudo dnf install python-krbV
-  virtualenv --system-site-packages myproject
+  virtualenv myproject
   . myproject/bin/activate
-  pip install python-krbcontext
+  pip install krbcontext
 
 .. _virtual environment: https://pypi.python.org/pypi/virtualenv/
 
 Usage
 -----
 
-Arguments
-~~~~~~~~~
+For details of API, please refer to API_. Here are some use cases.
 
-using_keytab
-    Specify whether using the service Keytab to initialize the credential cache.
-    Default is False.
-
-kwargs
-    Specify necessary arguments for initializing credential cache. Acceptable
-    arguments include:
-
-    * ``principal``: user principal or service principal
-    * ``keytab_file``: absolute path of Keytab file
-    * ``ccache_file``: absolute path of credential cache
+.. _API: api.html
 
 Basic
 ~~~~~
@@ -104,11 +69,10 @@ As a regular user
     with krbContext():
         pass
 
-This is the most simplest way. It uses default values. It gets current effective
-user name rather than login name, and initialize the default credential cache,
-``/tmp/krb5cc_xxx``, where xxx is the current user ID returned by ``os.getuid`` method.
+This is the most simplest way, which uses default values. It gets current
+effective user name, and get ticket and store it into default credential cache.
 
-Specifying custom values
+You can specify specific prinicpal or cache file explicityly.
 
 ::
 
@@ -117,7 +81,7 @@ Specifying custom values
         pass
 
     with krbContext(principal='qcxhome',
-                    ccache_file='/tmp/krb5cc_my'):
+                    ccache_file='/tmp/my_cc'):
         pass
 
 Using service Keytab
@@ -129,9 +93,8 @@ Using service Keytab
                     principal='HTTP/localhost@EXAMPLE.COM'):
         pass
 
-You can also use default values here except the using_keytab and principal.
-The default Keytab locates ``/etc/krb5.keytab``, and default credential cache
-locates ``/tmp/krb5cc_xxx``, like above.
+``principal`` must be specified when initialize with keytab. In this example,
+``keytab_file`` is omitted, that means to use default keytab file.
 
 ::
 
@@ -141,8 +104,11 @@ locates ``/tmp/krb5cc_xxx``, like above.
                     ccache_file='/tmp/krb5cc_pid_appname'):
         pass
 
-If you have another Keytab that is be elsewhere and a credential cache for
-special purpose, you may pass the ``keytab_file`` and ``ccache_file``.
+Alternatively, following example shows to ask ``krbContext`` to initialize a
+given credential cache file from specified keytab file. This is a general use
+case in a service that calls a third-party service's API, which needs to be
+authenticated by Kerberos GSSAPI mechanism.
+
 
 Backward Compatibility
 ----------------------
