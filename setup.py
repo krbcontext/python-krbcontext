@@ -8,6 +8,18 @@ def get_long_description():
 
 %s''' % (open('README.rst', 'r').read(), open('CHANGES', 'r').read())
 
+
+def get_install_requires():
+    with open('requirements.txt', 'r') as fin:
+        return [package.strip() for package in fin]
+
+
+def get_test_requires():
+    with open('test-requirements.txt', 'r') as fin:
+        return [package.strip() for package in fin
+                if not package.startswith('-r')]
+
+
 setup(
     name='krbcontext',
     version='0.3.3',
@@ -21,8 +33,8 @@ setup(
 
     packages=find_packages(),
 
-    setup_requires=['pytest-runner'],
-    tests_require=['mock', 'pytest'],
+    install_requires=get_install_requires(),
+    tests_require=get_test_requires(),
 
     classifiers=[
         'Development Status :: 5 - Production/Stable',
@@ -34,8 +46,10 @@ setup(
         'Operating System :: POSIX',
         'Programming Language :: Python',
         'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.6',
         'Programming Language :: Python :: 2.7',
+        'Programming Language :: Python :: 3',
+        'Programming Language :: Python :: 3.5',
+        'Programming Language :: Python :: 3.6',
         'Topic :: Software Development :: Libraries',
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Topic :: System :: Systems Administration',

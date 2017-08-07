@@ -1,3 +1,6 @@
+-r requirements.txt
+
+flake8
 mock
 pytest
-flake8
+pytest-cov

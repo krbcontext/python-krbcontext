@@ -1,3 +1,3 @@
 # -*- coding: utf-8 -*-
 
-from context import *  # noqa
+from .context import *  # noqa
