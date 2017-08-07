@@ -1,318 +1,431 @@
 # -*- coding: utf-8 -*-
 
-import krbV
 import os
-import time
 import unittest
 
-from datetime import datetime
-from datetime import timedelta
+import gssapi
+
 from mock import patch
-from mock import Mock
 
-import config
 import krbcontext.context as kctx
-
-from krbcontext.context import is_initialize_ccache_necessary
-from krbcontext.context import KRB5InitError
-from krbcontext.utils import get_tgt_time
-from krbcontext.utils import CredentialTime
-
-
-def krb_default_cc_name():
-    context = krbV.default_context()
-    return context.default_ccache().name
-
-
-def krb_default_keytab_name():
-    context = krbV.default_context()
-    return context.default_keytab().name
-
-
-def get_fake_cred_time(expired):
-    assert isinstance(expired, bool)
-    delta = 5
-    if expired:
-        delta *= -1
-    endtime = datetime.now() + timedelta(minutes=delta)
-    return CredentialTime(authtime=None, starttime=None, endtime=endtime, renew_till=None)
-
-
-class GetTGTTimeError(Exception):
-    """Used for running tests only"""
-
-
-class CCacheInitializationRequiredTest(unittest.TestCase):
-
-    def setUp(self):
-        self.context = krbV.default_context()
-        self.ccache = krbV.CCache(config.user_ccache_file, context=self.context)
-        self.principal = krbV.Principal(config.service_principal, context=self.context)
-
-    @patch('krbcontext.context.get_tgt_time')
-    def test_init_if_ccache_is_expired(self, get_tgt_time):
-        get_tgt_time.return_value = get_fake_cred_time(expired=True)
-
-        result = is_initialize_ccache_necessary(self.context, self.ccache, self.principal)
-        self.assertTrue(result)
-
-    @patch('krbcontext.context.get_tgt_time')
-    def test_dont_init_ccache_is_not_expired(self, get_tgt_time):
-        get_tgt_time.return_value = get_fake_cred_time(expired=False)
-
-        result = is_initialize_ccache_necessary(self.context, self.ccache, self.principal)
-        self.assertFalse(result)
-
-    def test_ccache_is_not_valid(self):
-        err_codes = (krbV.KRB5_FCC_NOFILE,
-                     krbV.KRB5_CC_FORMAT,
-                     krbV.KRB5_CC_NOTFOUND)
-
-        for err_code in err_codes:
-            with patch('krbcontext.context.get_tgt_time',
-                       side_effect=krbV.Krb5Error(err_code, '')):
-                result = is_initialize_ccache_necessary(self.context, self.ccache, self.principal)
-                self.assertTrue(result)
-
-    def test_error_when_get_cred_time(self):
-        with patch('krbcontext.context.get_tgt_time', side_effect=GetTGTTimeError()):
-            self.assertRaises(GetTGTTimeError, is_initialize_ccache_necessary,
-                              self.context, self.ccache, self.principal)
-
-    def test_non_monitored_error_occurs(self):
-        # krbV.KRB5_CC_NOT_KTYPE is choosed for raising an non-monitored error,
-        # which means an error is raised but that is not treated as a flag
-        # indicating the credential cache should be initialized.
-        # Thus, for running this test, any other errors could be used as long
-        # as it is not known errors by krbcontext.
-        with patch('krbcontext.context.get_tgt_time',
-                   side_effect=krbV.Krb5Error(krbV.KRB5_CC_NOT_KTYPE, '')):
-            self.assertRaises(krbV.Krb5Error, is_initialize_ccache_necessary,
-                              self.context, self.ccache, self.principal)
-
-
-class GetDefaultCCacheTest(unittest.TestCase):
-
-    def setUp(self):
-        self.context = krbV.default_context()
-
-    def test_get_default_ccache_from_env(self):
-        with patch.dict(os.environ, {'KRB5CCNAME': config.user_ccache_file}, clear=False):
-            ccache = kctx.get_default_ccache(self.context)
-            self.assertEqual(config.user_ccache_file, ccache.name)
-
-    def test_get_default_ccache_from_filesystem(self):
-        with patch.dict(os.environ, {'fake_var': '1'}, clear=True):
-            ccache = kctx.get_default_ccache(self.context)
-            default_ccache = '/tmp/krb5cc_{0}'.format(os.getuid())
-            self.assertEqual(default_ccache, ccache.name)
+from krbcontext.context import krbContext
+from krbcontext.context import get_login
 
 
 class CleanArgumetsUsingKeytabTest(unittest.TestCase):
+    """Test clean_context_options for using keytab"""
+
+    def test_missing_principal(self):
+        self.assertRaises(ValueError, krbContext, using_keytab=True)
+
+    def test_all_defaults(self):
+        context = krbContext(using_keytab=True,
+                             principal='HTTP/hostname@EXAMPLE.COM')
+
+        self.assertTrue(context.cleaned_options['using_keytab'])
+        expected_princ = gssapi.names.Name(
+            'HTTP/hostname@EXAMPLE.COM',
+            gssapi.names.NameType.kerberos_principal)
+        self.assertEqual(expected_princ, context.cleaned_options['principal'])
+        self.assertEqual(kctx.DEFAULT_CCACHE,
+                         context.cleaned_options['ccache'])
+        self.assertEqual(kctx.DEFAULT_KEYTAB,
+                         context.cleaned_options['keytab'])
+
+    @patch('os.path.exists')
+    def test_specify_existing_keytab(self, exists):
+        exists.return_value = True
+
+        context = krbContext(using_keytab=True,
+                             principal='HTTP/hostname@EXAMPLE.COM',
+                             keytab_file='/etc/app/app.keytab')
+        self.assertEqual('/etc/app/app.keytab',
+                         context.cleaned_options['keytab'])
+
+    @patch('os.path.exists')
+    def test_specify_nonexisting_keytab(self, exists):
+        exists.return_value = False
+
+        self.assertRaises(ValueError,
+                          krbContext,
+                          using_keytab=True,
+                          principal='HTTP/hostname@EXAMPLE.COM',
+                          keytab_file='/etc/app/app.keytab')
+
+    def test_specify_ccache(self):
+        context = krbContext(using_keytab=True,
+                             principal='HTTP/hostname@EXAMPLE.COM',
+                             ccache_file='/var/app/krb5_ccache')
+        self.assertEqual('/var/app/krb5_ccache',
+                         context.cleaned_options['ccache'])
+
+
+class CleanArgumentsAsRegularUserTest(unittest.TestCase):
+    """Test clean_context_options for not using keytab"""
+
+    @patch('krbcontext.context.get_login')
+    def test_all_defaults(self, get_login):
+        get_login.return_value = 'cqi'
+
+        context = krbContext()
+
+        expected_princ = gssapi.names.Name(get_login.return_value,
+                                           gssapi.names.NameType.user)
+        self.assertEqual(expected_princ, context.cleaned_options['principal'])
+        self.assertEqual(kctx.DEFAULT_CCACHE,
+                         context.cleaned_options['ccache'])
+        self.assertFalse(context.cleaned_options['using_keytab'])
+
+    def test_specify_ccache(self):
+        context = krbContext(principal='cqi',
+                             ccache_file='/var/app/krb5_ccache')
+        self.assertEqual('/var/app/krb5_ccache',
+                         context.cleaned_options['ccache'])
+
+    def test_specify_principal(self):
+        context = krbContext(principal='cqi')
+        expected_princ = gssapi.names.Name('cqi', gssapi.names.NameType.user)
+        self.assertEqual(expected_princ, context.cleaned_options['principal'])
+
+
+class FakeCredentials(object):
+    """Used for test test_ccache_is_expired"""
+
+    def __init__(self, *args, **kwargs):
+        """Actually no need to initialize this fake object"""
+        self.args = args
+        self.kwargs = kwargs
+
+    @property
+    def lifetime(self):
+        """test_ccache_is_expired needs to catch ExpiredCredentialsError"""
+        raise gssapi.exceptions.ExpiredCredentialsError(1, 1)
+
+
+class TestIsInitializeCCacheNecessary(unittest.TestCase):
+    """Test is_initialize_ccache_necessary"""
+
+    @patch('gssapi.creds.Credentials')
+    def test_no_need_by_checking_from_default_ccache(self, Credentials):
+        context = krbContext(principal='cqi')
+        result = context.need_init()
+        self.assertFalse(result)
+
+    @patch('gssapi.creds.Credentials')
+    def test_no_need_by_checking_from_given_ccache(self, Credentials):
+        context = krbContext(principal='cqi', ccache_file='/tmp/my_cc')
+        result = context.need_init()
+
+        self.assertFalse(result)
+        Credentials.assert_called_once_with(
+            usage='initiate', store={'ccache': '/tmp/my_cc'})
+
+    @patch('gssapi.creds.Credentials')
+    def test_ccache_not_found(self, Credentials):
+        Credentials.side_effect = gssapi.exceptions.GSSError(1, 2529639107)
+
+        context = krbContext(principal='cqi', ccache_file='/tmp/my_cc')
+        result = context.need_init()
+        self.assertTrue(result)
+
+    @patch('gssapi.creds.Credentials')
+    def test_ccache_has_bad_format(self, Credentials):
+        Credentials.side_effect = gssapi.exceptions.GSSError(1, 2529639111)
+
+        context = krbContext(principal='cqi', ccache_file='/tmp/my_cc')
+        result = context.need_init()
+        self.assertTrue(result)
+
+    @patch('gssapi.creds.Credentials')
+    def test_ccache_no_cred_available(self, Credentials):
+        Credentials.side_effect = gssapi.exceptions.GSSError(1, 2529639053)
+
+        context = krbContext(principal='cqi', ccache_file='/tmp/my_cc')
+        result = context.need_init()
+        self.assertTrue(result)
+
+    @patch('gssapi.creds.Credentials', new=FakeCredentials)
+    def test_ccache_is_expired(self):
+        context = krbContext(principal='cqi',
+                             ccache_file='/tmp/app/krb5_my_cc')
+        result = context.need_init()
+        self.assertTrue(result)
+
+    @patch('gssapi.creds.Credentials')
+    def test_raise_if_unknown_gss_error_is_caught(self, Credentials):
+        Credentials.side_effect = gssapi.exceptions.GSSError(1, 99999999)
+
+        context = krbContext(principal='cqi', ccache_file=kctx.DEFAULT_CCACHE)
+        self.assertRaises(gssapi.exceptions.GSSError, context.need_init)
+
+
+class TestInitWithKeytab(unittest.TestCase):
+    """Test init_ccache_with_keytab"""
 
     def setUp(self):
-        self.context = krbV.default_context()
-        self.kwargs = {
-            'using_keytab': True,
-        }
+        self.service_principal = 'HTTP/hostname@EXAMPLE.COM'
+        self.princ_name = gssapi.names.Name(
+            self.service_principal,
+            gssapi.names.NameType.kerberos_principal)
 
-    def testPrincipalNotProvide(self):
-        self.assertRaises(NameError, kctx.clean_context_options, self.context, **self.kwargs)
+        self.Lock = patch('krbcontext.context.Lock')
+        self.Lock.start()
 
-    def testAllDefault(self):
-        self.kwargs.update({
-            'principal': config.service_principal,
-        })
-        cleaned_kwargs = kctx.clean_context_options(self.context, **self.kwargs)
+    def tearDown(self):
+        self.Lock.stop()
 
-        self.assert_('principal' in cleaned_kwargs)
-        self.assertEqual(cleaned_kwargs['principal'].name, config.service_principal)
+    @patch('gssapi.creds.Credentials')
+    def test_init_with_all_defaults(self, Credentials):
+        context = krbContext(using_keytab=True,
+                             principal=self.service_principal)
+        context.init_with_keytab()
 
-        self.assert_('ccache' in cleaned_kwargs)
-        expected_ccache_file = krb_default_cc_name()
-        self.assertEqual(cleaned_kwargs['ccache'].name, expected_ccache_file)
+        Credentials.assert_called_once_with(
+            usage='initiate', name=self.princ_name, store={})
 
-        self.assert_('keytab' in cleaned_kwargs)
-        kt = cleaned_kwargs['keytab']
-        expected_kt_name = krb_default_keytab_name()
-        self.assertEqual(kt.name, expected_kt_name)
+    @patch('gssapi.creds.Credentials')
+    @patch('os.path.exists', return_value=True)
+    def test_init_with_given_keytab(self, exists, Credentials):
+        keytab = '/etc/app/app.keytab'
+        context = krbContext(using_keytab=True,
+                             principal=self.service_principal,
+                             keytab_file=keytab)
+        context.init_with_keytab()
 
-    def testSpecifyAllManually(self):
-        self.kwargs.update({
-            'principal': config.service_principal,
-            'ccache_file': config.user_ccache_file,
-            'keytab_file': config.user_keytab_file,
-        })
+        Credentials.assert_called_once_with(usage='initiate',
+                                            name=self.princ_name,
+                                            store={'keytab': keytab})
 
-        cleaned_kwargs = kctx.clean_context_options(self.context, **self.kwargs)
+    @patch('gssapi.creds.Credentials')
+    @patch('os.remove')
+    def test_init_with_given_ccache(self, remove, Credentials):
+        ccache = '/tmp/mycc'
+        context = krbContext(using_keytab=True,
+                             principal=self.service_principal,
+                             ccache_file=ccache)
+        context.init_with_keytab()
 
-        self.assert_('ccache' in cleaned_kwargs)
-        self.assertEqual(cleaned_kwargs['ccache'].name, config.user_ccache_file)
+        Credentials.assert_called_once_with(
+            usage='initiate', name=self.princ_name, store={'ccache': ccache})
 
-        self.assert_('keytab' in cleaned_kwargs)
-        kt = cleaned_kwargs['keytab']
-        expected_kt_name = config.user_keytab_file
-        self.assert_(kt.name.endswith(expected_kt_name))
+    @patch('gssapi.creds.Credentials')
+    @patch('os.path.exists', return_value=True)
+    @patch('os.remove')
+    def test_init_with_given_keytab_and_ccache(
+            self, remove, exists, Credentials):
+        keytab = '/etc/app/app.keytab'
+        ccache = '/tmp/mycc'
+        context = krbContext(using_keytab=True,
+                             principal=self.service_principal,
+                             keytab_file=keytab,
+                             ccache_file=ccache)
+        context.init_with_keytab()
+
+        Credentials.assert_called_once_with(
+            usage='initiate',
+            name=self.princ_name,
+            store={'ccache': ccache, 'keytab': keytab})
 
 
-class CleanArgumetsAsRegularUserTest(unittest.TestCase):
+class TestInitWithPassword(unittest.TestCase):
+    """Test init_ccache_as_regular_user"""
 
     def setUp(self):
-        self.context = krbV.default_context()
+        self.principal = 'cqi'
+        self.princ_name = gssapi.names.Name(self.principal,
+                                            gssapi.names.NameType.user)
 
-    def testAllDefault(self):
-        cleaned_kwargs = kctx.clean_context_options(self.context, **{})
-        self.assert_('using_keytab' in cleaned_kwargs)
-        self.assertFalse(cleaned_kwargs['using_keytab'])
+    @patch('gssapi.raw.acquire_cred_with_password')
+    @patch('gssapi.raw.store_cred')
+    def test_init_cred_in_default_ccache(self,
+                                         store_cred,
+                                         acquire_cred_with_password):
+        context = krbContext(using_keytab=False,
+                             principal=self.principal,
+                             password='security')
+        context.init_with_password()
 
-        self.assert_('principal' in cleaned_kwargs)
-        principal = cleaned_kwargs['principal']
-        self.assertEqual(principal.name.split('@')[0], kctx.get_login())
+        acquire_cred_with_password.assert_called_once_with(
+            self.princ_name, 'security')
 
-        self.assert_('ccache' in cleaned_kwargs)
-        ccache = cleaned_kwargs['ccache']
-        self.assertEqual(ccache.name, krb_default_cc_name())
+        store_cred.assert_called_once_with(
+            acquire_cred_with_password.return_value.creds,
+            usage='initiate',
+            overwrite=True)
 
-    def testSpecifyAllManually(self):
-        kwargs = {
-            'using_keytab': False,
-            'principal': config.user_principal,
-            'ccache_file': config.user_ccache_file,
-        }
-        cleaned_kwargs = kctx.clean_context_options(self.context, **kwargs)
+    @patch('gssapi.raw.acquire_cred_with_password')
+    @patch('gssapi.raw.store_cred_into')
+    def test_init_cred_in_given_ccache(self,
+                                       store_cred_into,
+                                       acquire_cred_with_password):
+        context = krbContext(using_keytab=False,
+                             principal=self.principal,
+                             ccache_file='/tmp/mycc',
+                             password='security')
+        context.init_with_password()
 
-        self.assert_('principal' in cleaned_kwargs)
-        test_user_princ = cleaned_kwargs['principal']
-        self.assertEqual(test_user_princ.name, config.user_principal)
+        acquire_cred_with_password.assert_called_once_with(
+            self.princ_name, 'security')
 
-        self.assert_('ccache' in cleaned_kwargs)
-        ccache = cleaned_kwargs['ccache']
-        self.assertEqual(ccache.name, config.user_ccache_file)
+        store_cred_into.assert_called_once_with(
+            {'ccache': '/tmp/mycc'},
+            acquire_cred_with_password.return_value.creds,
+            usage='initiate',
+            overwrite=True)
+
+    @patch('sys.stdin.isatty', return_value=True)
+    @patch('getpass.getpass')
+    @patch('gssapi.raw.acquire_cred_with_password')
+    @patch('gssapi.raw.store_cred')
+    def test_init_cred_with_need_enter_password(self, store_cred,
+                                                acquire_cred_with_password,
+                                                getpass, isatty):
+        getpass.return_value = 'mypassword'
+
+        context = krbContext(using_keytab=False, principal=self.principal)
+        context.init_with_password()
+
+        isatty.assert_called_once()
+        # Ensure this must be called.
+        getpass.assert_called_once()
+
+        acquire_cred_with_password.assert_called_once_with(
+            self.princ_name, 'mypassword')
+
+        store_cred.assert_called_once_with(
+            acquire_cred_with_password.return_value.creds,
+            usage='initiate',
+            overwrite=True)
+
+    @patch('sys.stdin.isatty', return_value=False)
+    def test_init_cred_with_entering_password_but_not_in_atty(self, isatty):
+        context = krbContext(using_keytab=False, principal=self.principal)
+        self.assertRaises(IOError, context.init_with_password)
+
+        context = krbContext(using_keytab=False,
+                             principal=self.principal,
+                             password='')
+        self.assertRaises(IOError, context.init_with_password)
 
 
-class InitAsRegularUserTest(unittest.TestCase):
+class TestKrbContextManager(unittest.TestCase):
+    """Test krbContext context manager"""
 
-    @patch('sys.stdin')
-    @patch('krbcontext.context.get_tgt_time')
-    @patch('krbcontext.context.subprocess.Popen')
-    def test_init(self, Popen, get_tgt_time, stdin):
-        get_tgt_time.return_value = get_fake_cred_time(expired=True)
-        Popen.return_value.communicate.return_value = ('', '')
-        Popen.return_value.returncode = 0
-        stdin.isatty.return_value = True
+    def setUp(self):
+        # Do not actually operate threading lock
+        self.init_Lock = patch('krbcontext.context.Lock')
+        self.init_Lock.start()
 
-        with kctx.krbContext():
+    def tearDown(self):
+        self.init_Lock.stop()
+
+    @patch('krbcontext.context.krbContext.need_init', return_value=True)
+    @patch('krbcontext.context.krbContext.init_with_keytab')
+    @patch.dict('os.environ', {}, clear=True)
+    def test_init_with_keytab(self, init_with_keytab, need_init):
+        with krbContext(using_keytab=True,
+                        principal='app/hostname@EXAMPLE.COM',
+                        ccache_file='/tmp/my_cc'):
+            init_with_keytab.assert_called_once_with(
+                gssapi.names.Name('app/hostname@EXAMPLE.COM',
+                                  gssapi.names.NameType.kerberos_principal),
+                kctx.DEFAULT_KEYTAB,
+                '/tmp/my_cc'
+            )
+
+    @patch('krbcontext.context.krbContext.need_init', return_value=True)
+    @patch('krbcontext.context.krbContext.init_with_password')
+    @patch.dict('os.environ', {}, clear=True)
+    def test_init_with_password(self, init_with_password, need_init):
+        with krbContext(using_keytab=False,
+                        principal='cqi',
+                        password='security') as context:
+            context.init_with_password.assert_called_once_with(
+                gssapi.names.Name('cqi', gssapi.names.NameType.user),
+                kctx.DEFAULT_CCACHE,
+                'security'
+            )
+
+    @patch('krbcontext.context.krbContext.need_init', return_value=True)
+    @patch('krbcontext.context.krbContext.init_with_keytab')
+    @patch.dict('os.environ', {'KRB5CCNAME': '/tmp/my_cc'}, clear=True)
+    def test_original_ccache_should_be_restored(self,
+                                                init_with_keytab,
+                                                need_init):
+        with krbContext(using_keytab=True,
+                        principal='app/hostname@EXAMPLE.COM',
+                        ccache_file='/tmp/app_pid_cc'):
+            # Inside context, given ccache should be used.
+            self.assertEqual('/tmp/app_pid_cc', os.environ['KRB5CCNAME'])
+
+            init_with_keytab.assert_called_once_with(
+                gssapi.names.Name('app/hostname@EXAMPLE.COM',
+                                  gssapi.names.NameType.kerberos_principal),
+                kctx.DEFAULT_KEYTAB,
+                '/tmp/app_pid_cc'
+            )
+
+        self.assertIn('KRB5CCNAME', os.environ)
+        self.assertEqual('/tmp/my_cc', os.environ['KRB5CCNAME'])
+
+    @patch('krbcontext.context.krbContext.need_init', return_value=True)
+    @patch('krbcontext.context.krbContext.init_with_keytab')
+    @patch.dict('os.environ', {}, clear=True)
+    def test_init_in_default_ccache_without_original_krb5ccname_is_set(
+            self, init_with_keytab, need_init):
+        with krbContext(using_keytab=True,
+                        principal='app/hostname@EXAMPLE.COM'):
+            self.assertNotIn('KRB5CCNAME', os.environ)
+
+            init_with_keytab.assert_called_once_with(
+                gssapi.names.Name('app/hostname@EXAMPLE.COM',
+                                  gssapi.names.NameType.kerberos_principal),
+                kctx.DEFAULT_KEYTAB,
+                kctx.DEFAULT_CCACHE,
+            )
+
+        # Originally, no KRB5CCNAME is set, it should be cleaned after exit.
+        self.assertNotIn('KRB5CCNAME', os.environ)
+
+    @patch('krbcontext.context.krbContext.need_init', return_value=True)
+    @patch('krbcontext.context.krbContext.init_with_keytab')
+    @patch.dict('os.environ', {'KRB5CCNAME': '/tmp/my_cc'}, clear=True)
+    def test_init_in_default_ccache_with_original_krb5ccname_is_set(
+            self, init_with_keytab, need_init):
+        with krbContext(using_keytab=True,
+                        principal='app/hostname@EXAMPLE.COM'):
+            self.assertNotIn('KRB5CCNAME', os.environ)
+
+            init_with_keytab.assert_called_once_with(
+                gssapi.names.Name('app/hostname@EXAMPLE.COM',
+                                  gssapi.names.NameType.kerberos_principal),
+                kctx.DEFAULT_KEYTAB,
+                kctx.DEFAULT_CCACHE,
+            )
+
+        self.assertIn('KRB5CCNAME', os.environ)
+        self.assertEqual('/tmp/my_cc', os.environ['KRB5CCNAME'])
+
+    @patch('krbcontext.context.krbContext.need_init', return_value=False)
+    @patch('krbcontext.context.krbContext.init_with_keytab')
+    def test_do_nothing_if_unnecessary_to_init(self,
+                                               init_with_keytab,
+                                               need_init):
+        with krbContext(using_keytab=True,
+                        principal='app/hostname@EXAMPLE.COM'):
             pass
-
-    @patch('sys.stdin')
-    @patch('krbcontext.context.subprocess.Popen')
-    def test_init_command_fails(self, Popen, stdin):
-        Popen.return_value.returncode = 1
-        Popen.return_value.communicate.return_value = ('', 'something goes wrong.')
-        stdin.isatty.return_value = True
-
-        try:
-            with kctx.krbContext():
-                pass
-        except Exception as e:
-            self.assertTrue(isinstance(e, KRB5InitError))
-
-    @patch('sys.stdin')
-    @patch('krbcontext.context.get_tgt_time')
-    def test_not_in_terminal(self, get_tgt_time, stdin):
-        stdin.isatty.return_value = False
-        get_tgt_time.return_value = get_fake_cred_time(expired=True)
-
-        try:
-            with kctx.krbContext():
-                pass
-        except Exception as e:
-            self.assertTrue(isinstance(e, IOError))
+        init_with_keytab.assert_not_called()
 
 
-class InitUsingKeytab(unittest.TestCase):
+class TestGetLogin(unittest.TestCase):
+    """Test get_login"""
 
-    @patch('krbcontext.context.get_tgt_time')
-    def test_no_need_init(self, get_tgt_time):
-        get_tgt_time.return_value = get_fake_cred_time(expired=False)
+    @patch('os.getuid', return_value=1001)
+    @patch('pwd.getpwuid')
+    def test_get_login(self, getpwuid, getuid):
+        getpwuid.return_value.pw_name = 'user'
 
-        with patch.dict(os.environ, {}, clear=True):
-            with kctx.krbContext(using_keytab=True,
-                                 principal='HTTP/www.example.com@EXAMPLE.COM') as context:
-                self.assertFalse(context.initialized)
-                self.assertTrue('KRB5CCNAME' not in os.environ)
-            self.assertTrue('KRB5CCNAME' not in os.environ)
+        user = get_login()
 
-    @patch('krbV.CCache.init')
-    @patch('krbV.CCache.init_creds_keytab')
-    def assert_krbContext(self, init_creds_keytab, init):
-        with kctx.krbContext(using_keytab=True,
-                             principal='HTTP/www.example@EXAMPLE.COM',
-                             keytab_file='/etc/httpd/conf/httpd.keytab',
-                             ccache_file='/tmp/krb5cc_app') as context:
-            self.assertTrue(context.initialized)
-            self.assertEqual('/tmp/krb5cc_app', os.environ['KRB5CCNAME'])
-
-    @patch('krbcontext.context.get_tgt_time')
-    def test_init(self, get_tgt_time):
-        get_tgt_time.return_value = get_fake_cred_time(expired=True)
-
-        with patch.dict(os.environ, {}, clear=True):
-            self.assert_krbContext()
-            self.assertTrue('KRB5CCNAME' not in os.environ)
-
-        original_krb5ccname = '/tmp/krb5cc_system'
-        with patch.dict(os.environ, {'KRB5CCNAME': original_krb5ccname}, clear=True):
-            self.assert_krbContext()
-            self.assertEqual(original_krb5ccname, os.environ['KRB5CCNAME'])
-
-
-class BackwardCompabilityTest(unittest.TestCase):
-    """Test backward compatible name krbcontext"""
-
-    @patch('krbcontext.context.get_tgt_time')
-    def test_krbcontext(self, get_tgt_time):
-        get_tgt_time.return_value = get_fake_cred_time(expired=False)
-
-        with kctx.krbcontext(using_keytab=True,
-                             principal='HTTP/www.example.com@EXAMPLE.COM'):
-            pass
-
-
-class krbContextPropertiesAccessibleTest(unittest.TestCase):
-
-    @patch('krbcontext.context.get_tgt_time')
-    def test_access_initialized_property(self, get_tgt_time):
-        get_tgt_time.return_value = get_fake_cred_time(expired=False)
-
-        with patch.dict(os.environ, {'fake_var': '1'}, clear=True):
-            with kctx.krbContext(using_keytab=True,
-                                 principal='HTTP/localhost@PYPI.PYTHON.COM',
-                                 keytab_file='/etc/httpd/conf/httpd.keytab',
-                                 ccache_file='/tmp/krb5cc_pid_appname') as ctx:
-                self.assertFalse(ctx.initialized)
-
-
-class GetTGTTimeTest(unittest.TestCase):
-
-    def test_get_tgt_time(self):
-        context = krbV.default_context()
-        principal = krbV.Principal('cqi@EXAMPLE.COM')
-
-        expected_authtime = time.time()
-        expected_starttime = time.time()
-        expected_endtime = time.time()
-        expected_renew_till = time.time()
-
-        ccache = Mock()
-        ccache.get_credentials.return_value = (
-            None, None, (0, None),
-            (expected_authtime, expected_starttime, expected_endtime, expected_renew_till),
-            None, None, None, None, None, None)
-
-        cred_time = get_tgt_time(context, ccache, principal)
-
-        self.assertEqual(datetime.fromtimestamp(expected_authtime), cred_time.authtime)
-        self.assertEqual(datetime.fromtimestamp(expected_starttime), cred_time.starttime)
-        self.assertEqual(datetime.fromtimestamp(expected_endtime), cred_time.endtime)
-        self.assertEqual(datetime.fromtimestamp(expected_renew_till), cred_time.renew_till)
+        getpwuid.assert_called_once_with(getuid.return_value)
+        self.assertEqual('user', user)

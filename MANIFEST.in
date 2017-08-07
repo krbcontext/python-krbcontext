@@ -1,2 +1,1 @@
 include LICENSE README.rst CHANGES *.spec
-include test/config.py
