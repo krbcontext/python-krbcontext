@@ -2,3 +2,7 @@ include LICENSE README.rst CHANGES
 include tox.ini
 include python-krbcontext.spec
 include requirements.txt test-requirements.txt
+
+include docs/Makefile
+include docs/source/conf.py
+include docs/source/*.rst
