@@ -8,8 +8,11 @@
 dist/
 .cache/
 htmlcov/
-README.html
 docs/build/
+build/
+.tox/
+.vagrant/
 
+README.html
 tags
 TAGS
