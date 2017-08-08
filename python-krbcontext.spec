@@ -1,5 +1,3 @@
-%{!?python_sitelib: %global python_sitelib %(%{__python} -c "from distutils.sysconfig import get_python_lib; print(get_python_lib())")}
-
 %define src_name krbcontext
 %define version 0.3.3
 %define release 1
@@ -8,51 +6,102 @@ Summary: A Kerberos context manager
 Name: python-%{src_name}
 Version: %{version}
 Release: %{release}%{?dist}
-Source0: http://pypi.python.org/packages/source/k/krbcontext/%{src_name}-%{version}.tar.gz
+Source0: %{src_name}-%{version}.tar.gz
 License: GPLv3
 Group: Development/Libraries
-Url: https://github.com/tkdchen/python-krbcontext
+Url: https://github.com/krbcontext/python-krbcontext
 BuildArch: noarch
 
-BuildRequires: python-setuptools
-
-Requires: python-krbV
-
 %description
-krbcontext does the initialization of credential cache (ticket file) in a
-kerberos-related context. It provides a context manager that allows developers
-to put codes inside, which needs a Kerberos environment.
+krbcontext provides a Kerberos context that you can put code inside, which
+requires a valid ticket in credential cache.
 
-As a general step before invoking any Kerberos commands and APIs, you should
-configure your Kerberos environment in file /etc/krb5.conf properly.
+krbcontext is able to initialize credential cache automatically on behalf
+of you according to the options you specify. It can initialize with keytab or a
+regular user's Kerberos name and password.
 
-You can use krbcontext with a regular Kerberos user or a service Keytab
-file. When you work as a regular user, krbcontext prompts you to enter
-password of your Kerberos account. Whatever in which way, it accepts a set of
-default values and specified values.
+You can use krbcontext as a context manager with with statement, or
+call API directly to check credential cache and even initialize by yourself.
 
-There are several concepts you must know before using krbcontext, principal
-of user and service, service Keytab file, and credential cache (ticket
-file). Therefore, the arguments passed to krbcontext are mapped to these
-concepts.
+%package -n python2-%{src_name}
+Summary: A Kerberos context manager
+
+BuildRequires: python-devel
+BuildRequires: python-setuptools
+BuildRequires: python-gssapi
+# For running test
+BuildRequires: python2-mock
+BuildRequires: python-flake8
+BuildRequires: python-pytest-cov
+BuildRequires: python2-pytest
+
+Requires: python-gssapi
+
+%description -n python2-%{src_name}
+krbcontext provides a Kerberos context that you can put code inside, which
+requires a valid ticket in credential cache.
+
+krbcontext is able to initialize credential cache automatically on behalf
+of you according to the options you specify. It can initialize with keytab or a
+regular user's Kerberos name and password.
+
+You can use krbcontext as a context manager with with statement, or
+call API directly to check credential cache and even initialize by yourself.
+
+%package -n python3-%{src_name}
+Summary: A Kerberos context manager
+
+BuildRequires: python3-setuptools
+BuildRequires: python3-devel
+BuildRequires: python3-gssapi
+# For running test
+BuildRequires: python3-flake8
+BuildRequires: python3-mock
+BuildRequires: python3-pytest
+BuildRequires: python3-pytest-cov
+
+Requires: python3-gssapi
+
+%description -n python3-%{src_name}
+krbcontext provides a Kerberos context that you can put code inside, which
+requires a valid ticket in credential cache.
+
+krbcontext is able to initialize credential cache automatically on behalf
+of you according to the options you specify. It can initialize with keytab or a
+regular user's Kerberos name and password.
+
+You can use krbcontext as a context manager with with statement, or
+call API directly to check credential cache and even initialize by yourself.
 
 %prep
 %setup -q -n %{src_name}-%{version}
 
 %build
-%{__python} setup.py build
+%py2_build
+%py3_build
 
 %install
-%{__python} setup.py install -O1 --root=$RPM_BUILD_ROOT
+%py2_install
+%py3_install
+
+%check
+PYTHONPATH=. py.test test/
+PYTHONPATH=. py.test-3 test/
 
 %clean
 rm -rf $RPM_BUILD_ROOT
 
-%files
+%files -n python2-%{src_name}
 %defattr(-,root,root)
-%doc README.rst CHANGES LICENSE
-%{python_sitelib}/krbcontext/
-%{python_sitelib}/krbcontext-%{version}-*.egg-info
+%doc README.rst CHANGES LICENSE docs/
+%{python2_sitelib}/krbcontext/
+%{python2_sitelib}/krbcontext-%{version}-*.egg-info
+
+%files -n python3-%{src_name}
+%defattr(-,root,root)
+%doc README.rst CHANGES LICENSE docs/
+%{python3_sitelib}/krbcontext/
+%{python3_sitelib}/krbcontext-%{version}-*.egg-info
 
 %changelog
 
