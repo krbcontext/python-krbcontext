@@ -1,13 +1,15 @@
-ctags:
-	@rm -rf tags
-	@ctags -R --languages=Python --python-kinds=-im -f tags krbcontext/ test/
-
 sdist:
 	@python setup.py sdist
 
-rpm: sdist
-	@rpmbuild -D '_sourcedir $(realpath dist)' -ba python-krbcontext.spec
+srpm: sdist
+	@rpmbuild \
+		--define '_sourcedir $(realpath dist)' \
+		--define '_srcrpmdir $(realpath dist)' -bs python-krbcontext.spec
+
+rpm: srpm
+	@rpmbuild \
+		--define '_sourcedir $(realpath dist)' \
+		--define '_rpmdir $(realpath dist)' -ba python-krbcontext.spec
 
 check:
-	@flake8 krbcontext/ test/
-	@python setup.py test
+	@tox
