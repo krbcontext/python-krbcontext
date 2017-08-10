@@ -253,13 +253,9 @@ class krbContext(object):
         """
         ccache = self.cleaned_options['ccache']
         if self.cleaned_options['using_keytab']:
-            self.init_with_keytab(self.cleaned_options['principal'],
-                                  self.cleaned_options['keytab'],
-                                  ccache)
+            self.init_with_keytab()
         else:
-            self.init_with_password(self.cleaned_options['principal'],
-                                    ccache,
-                                    self.cleaned_options['password'])
+            self.init_with_password()
 
         if ccache == DEFAULT_CCACHE:
             if ENV_KRB5CCNAME in os.environ:

@@ -322,16 +322,12 @@ class TestKrbContextManager(unittest.TestCase):
     @patch('krbcontext.context.krbContext.need_init', return_value=True)
     @patch('krbcontext.context.krbContext.init_with_keytab')
     @patch.dict('os.environ', {}, clear=True)
-    def test_init_with_keytab(self, init_with_keytab, need_init):
+    def test_init_with_default_keytab(self, init_with_keytab, need_init):
         with krbContext(using_keytab=True,
                         principal='app/hostname@EXAMPLE.COM',
                         ccache_file='/tmp/my_cc'):
-            init_with_keytab.assert_called_once_with(
-                gssapi.names.Name('app/hostname@EXAMPLE.COM',
-                                  gssapi.names.NameType.kerberos_principal),
-                kctx.DEFAULT_KEYTAB,
-                '/tmp/my_cc'
-            )
+            init_with_keytab.assert_called_once_with()
+            self.assertEqual('/tmp/my_cc', os.environ['KRB5CCNAME'])
 
     @patch('krbcontext.context.krbContext.need_init', return_value=True)
     @patch('krbcontext.context.krbContext.init_with_password')
@@ -339,12 +335,9 @@ class TestKrbContextManager(unittest.TestCase):
     def test_init_with_password(self, init_with_password, need_init):
         with krbContext(using_keytab=False,
                         principal='cqi',
-                        password='security') as context:
-            context.init_with_password.assert_called_once_with(
-                gssapi.names.Name('cqi', gssapi.names.NameType.user),
-                kctx.DEFAULT_CCACHE,
-                'security'
-            )
+                        password='security'):
+            init_with_password.assert_called_once_with()
+            self.assertNotIn('KRB5CCNAME', os.environ)
 
     @patch('krbcontext.context.krbContext.need_init', return_value=True)
     @patch('krbcontext.context.krbContext.init_with_keytab')
@@ -357,13 +350,7 @@ class TestKrbContextManager(unittest.TestCase):
                         ccache_file='/tmp/app_pid_cc'):
             # Inside context, given ccache should be used.
             self.assertEqual('/tmp/app_pid_cc', os.environ['KRB5CCNAME'])
-
-            init_with_keytab.assert_called_once_with(
-                gssapi.names.Name('app/hostname@EXAMPLE.COM',
-                                  gssapi.names.NameType.kerberos_principal),
-                kctx.DEFAULT_KEYTAB,
-                '/tmp/app_pid_cc'
-            )
+            init_with_keytab.assert_called_once_with()
 
         self.assertIn('KRB5CCNAME', os.environ)
         self.assertEqual('/tmp/my_cc', os.environ['KRB5CCNAME'])
@@ -376,13 +363,7 @@ class TestKrbContextManager(unittest.TestCase):
         with krbContext(using_keytab=True,
                         principal='app/hostname@EXAMPLE.COM'):
             self.assertNotIn('KRB5CCNAME', os.environ)
-
-            init_with_keytab.assert_called_once_with(
-                gssapi.names.Name('app/hostname@EXAMPLE.COM',
-                                  gssapi.names.NameType.kerberos_principal),
-                kctx.DEFAULT_KEYTAB,
-                kctx.DEFAULT_CCACHE,
-            )
+            init_with_keytab.assert_called_once_with()
 
         # Originally, no KRB5CCNAME is set, it should be cleaned after exit.
         self.assertNotIn('KRB5CCNAME', os.environ)
@@ -395,13 +376,7 @@ class TestKrbContextManager(unittest.TestCase):
         with krbContext(using_keytab=True,
                         principal='app/hostname@EXAMPLE.COM'):
             self.assertNotIn('KRB5CCNAME', os.environ)
-
-            init_with_keytab.assert_called_once_with(
-                gssapi.names.Name('app/hostname@EXAMPLE.COM',
-                                  gssapi.names.NameType.kerberos_principal),
-                kctx.DEFAULT_KEYTAB,
-                kctx.DEFAULT_CCACHE,
-            )
+            init_with_keytab.assert_called_once_with()
 
         self.assertIn('KRB5CCNAME', os.environ)
         self.assertEqual('/tmp/my_cc', os.environ['KRB5CCNAME'])
