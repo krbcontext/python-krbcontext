@@ -15,11 +15,14 @@
 # You should have received a copy of the GNU General Public License
 # along with this program.  If not, see <http://www.gnu.org/licenses/>.
 
-import gssapi
+import copy
+import getpass
 import os
 import pwd
 import sys
-import getpass
+import tempfile
+
+import gssapi
 
 from threading import Lock
 
@@ -34,6 +37,16 @@ ENV_KRB5CCNAME = 'KRB5CCNAME'
 def get_login():
     """Get current effective user name"""
     return pwd.getpwuid(os.getuid()).pw_name
+
+
+def _get_temp_ccache():
+    """Create a temporary file
+
+    :return: file name of created temporary file.
+    """
+    fd, filename = tempfile.mkstemp('krbcontext-tmp-ccache-')
+    os.close(fd)
+    return filename
 
 
 class krbContext(object):
@@ -65,26 +78,26 @@ class krbContext(object):
             will be initialized with password, that is using a regular user's
             Kerberos name and password. When ``True`` is specified, keytab will
             be used.
-        :param str principal: Kerberos principal to get TGT from KDC. To
-            initialize using a regular user Kerberos account, a principal would
-            be name@EXAMPLE.COM. To initialize using a keytab, a principal
-            would be a service principal with format
-            service_name/hostname@EXAMPLE.COM.
-        :param str keytab_file: file name of a keytab file, either absolute or
-            relative is okay. It is optional. Default keytab will be used if
-            omitted.
+        :param str principal: principal name. To initialize using a regular
+            user Kerberos account, a principal would be name@EXAMPLE.COM. To
+            initialize using a client keytab, a principal would be a service
+            principal with format service_name/hostname@EXAMPLE.COM.
+        :param str keytab_file: file name of a client keytab file, either
+            absolute or relative is okay. It is optional. Default client keytab
+            will be used if omitted.
         :param str ccache_file: file name of a credential cache to initialize.
             It is optional. Default ccache will be used if omitted.
         :param str password: user principal's password. It is optional. If
             omitted, program will be blocked and prompts to enter a password
             from command line, which requires program runs in a terminal.
         """
-        self.cleaned_options = self.clean_options(using_keytab=using_keytab,
-                                                  principal=principal,
-                                                  keytab_file=keytab_file,
-                                                  ccache_file=ccache_file,
-                                                  password=password)
-        self.original_krb5ccname = None
+        self._cleaned_options = self.clean_options(using_keytab=using_keytab,
+                                                   principal=principal,
+                                                   keytab_file=keytab_file,
+                                                   ccache_file=ccache_file,
+                                                   password=password)
+        self._original_krb5ccname = None
+        self._inited = False
 
         self._init_lock = Lock()
 
@@ -134,65 +147,40 @@ class krbContext(object):
 
         return cleaned
 
-    def need_init(self):
-        """Check if necessary to initialize credential cache
+    def init_with_keytab(self):
+        """Initialize credential cache with keytab"""
+        creds_opts = {
+            'usage': 'initiate',
+            'name': self._cleaned_options['principal'],
+        }
 
-        Following cases are handled
+        store = {}
+        if self._cleaned_options['keytab'] != DEFAULT_KEYTAB:
+            store['keytab'] = self._cleaned_options['keytab']
+        if self._cleaned_options['ccache'] != DEFAULT_CCACHE:
+            store['ccache'] = self._cleaned_options['ccache']
+        if store:
+            creds_opts['store'] = store
 
-        * No Kerberos credentials available in cache.
-        * Credential cache file does not exist.
-        * Credential cache file has bad format.
-        * TGT expires.
-
-        :return: True if necessary to initialize, otherwise False.
-        :rtype: bool
-        :raises gssapi.exceptions.GSSError: if krbcontext can't handle this
-            error raised from ``gssapi.creds.Credentials``.
-        """
-        ccache = self.cleaned_options['ccache']
-
-        if ccache != DEFAULT_CCACHE:
-            store = {'ccache': ccache}
-        else:
-            store = None
-
-        try:
-            creds = gssapi.creds.Credentials(usage='initiate', store=store)
-        except gssapi.exceptions.GSSError as e:
-            if e.min_code in (2529639053,  # No Kerberos credentials available
-                              2529639111,  # Bad format in credentials cache
-                              2529639107,  # No credentials cache found
-                              ):
-                return True
-            raise
-
+        creds = gssapi.creds.Credentials(**creds_opts)
         try:
             creds.lifetime
         except gssapi.exceptions.ExpiredCredentialsError:
-            return True
-
-        return False
-
-    def init_with_keytab(self):
-        """Initialize credential cache with keytab
-
-        :return: filename of newly initialized credential cache.
-        :rtype: str
-        """
-        store = {}
-        if self.cleaned_options['keytab'] != DEFAULT_KEYTAB:
-            store['keytab'] = self.cleaned_options['keytab']
-        if self.cleaned_options['ccache'] != DEFAULT_CCACHE:
-            os.remove(self.cleaned_options['ccache'])
-            store['ccache'] = self.cleaned_options['ccache']
-
-        creds = gssapi.creds.Credentials(
-            usage='initiate',
-            name=self.cleaned_options['principal'],
-            store=store)
-        creds.lifetime
-
-        return self.cleaned_options['ccache']
+            new_creds_opts = copy.deepcopy(creds_opts)
+            # Get new credential and put it into a temparory ccache
+            if 'store' in new_creds_opts:
+                new_creds_opts['store']['ccache'] = _get_temp_ccache()
+            else:
+                new_creds_opts['store'] = {'ccache': _get_temp_ccache()}
+            creds = gssapi.creds.Credentials(**new_creds_opts)
+            # Then, store new credential back to original specified ccache,
+            # whatever a given ccache file or the default one.
+            _store = None
+            # If default cccache is used, no need to specify ccache in store
+            # parameter passed to ``creds.store``.
+            if self._cleaned_options['ccache'] != DEFAULT_CCACHE:
+                _store = {'ccache': store['ccache']}
+            creds.store(usage='initiate', store=_store, overwrite=True)
 
     def init_with_password(self):
         """Initialize credential cache with password
@@ -201,45 +189,55 @@ class krbContext(object):
         API directly, the given password is not encrypted always. Although
         getting credential with password works, from security point of view, it
         is strongly recommended **NOT** use it in any formal production
-        environment . If you need to initialize credential in an application to
+        environment. If you need to initialize credential in an application to
         application Kerberos authentication context, keytab has to be used.
 
-        :return: name of newly initialized credential cache
-        :rtype: str
-        :raises IOError: if password is not provided and need to prompt user to
-            enter one.
+        :raises IOError: when trying to prompt to input password from command
+            line but no attry is available.
         """
-        password = self.cleaned_options['password']
+        creds_opts = {
+            'usage': 'initiate',
+            'name': self._cleaned_options['principal'],
+        }
+        if self._cleaned_options['ccache'] != DEFAULT_CCACHE:
+            creds_opts['store'] = {'ccache': self._cleaned_options['ccache']}
 
-        if not password:
-            if not sys.stdin.isatty():
-                raise IOError(
-                    'krbContext is not running from a terminal. So, you need '
-                    'to run kinit with your principal manually before '
-                    'anything goes.')
+        cred = gssapi.creds.Credentials(**creds_opts)
+        try:
+            cred.lifetime
+        except gssapi.exceptions.ExpiredCredentialsError:
+            password = self._cleaned_options['password']
 
-            # If there is no password specified via API call, prompt to enter
-            # one in order to continue to get credential. BUT, in some cases,
-            # blocking program and waiting for input of password is really bad,
-            # which may be only suitable for some simple use cases, for
-            # example, writing some scripts to test something that need
-            # Kerberos authentication. Anyway, whether it is really to enter a
-            # password from command line, it depends on concrete use cases
-            # totally.
-            password = getpass.getpass()
+            if not password:
+                if not sys.stdin.isatty():
+                    raise IOError(
+                        'krbContext is not running from a terminal. So, you '
+                        'need to run kinit with your principal manually before'
+                        ' anything goes.')
 
-        cred = gssapi.raw.acquire_cred_with_password(
-            self.cleaned_options['principal'], password)
+                # If there is no password specified via API call, prompt to
+                # enter one in order to continue to get credential. BUT, in
+                # some cases, blocking program and waiting for input of
+                # password is really bad, which may be only suitable for some
+                # simple use cases, for example, writing some scripts to test
+                # something that need Kerberos authentication. Anyway, whether
+                # it is really to enter a password from command line, it
+                # depends on concrete use cases totally.
+                password = getpass.getpass()
 
-        ccache = self.cleaned_options['ccache']
-        if ccache == DEFAULT_CCACHE:
-            gssapi.raw.store_cred(cred.creds, usage='initiate', overwrite=True)
-        else:
-            gssapi.raw.store_cred_into({'ccache': ccache},
-                                       cred.creds,
-                                       usage='initiate',
-                                       overwrite=True)
-        return ccache
+            cred = gssapi.raw.acquire_cred_with_password(
+                self._cleaned_options['principal'], password)
+
+            ccache = self._cleaned_options['ccache']
+            if ccache == DEFAULT_CCACHE:
+                gssapi.raw.store_cred(cred.creds,
+                                      usage='initiate',
+                                      overwrite=True)
+            else:
+                gssapi.raw.store_cred_into({'ccache': ccache},
+                                           cred.creds,
+                                           usage='initiate',
+                                           overwrite=True)
 
     def _prepare_context(self):
         """Prepare context
@@ -251,19 +249,28 @@ class krbContext(object):
 
         Internal use only.
         """
-        ccache = self.cleaned_options['ccache']
-        if self.cleaned_options['using_keytab']:
+        ccache = self._cleaned_options['ccache']
+
+        # Whatever there is KRB5CCNAME was set in current process,
+        # original_krb5ccname will contain current value even if None if
+        # that variable wasn't set, and when leave krbcontext, it can be
+        # handled properly.
+        self._original_krb5ccname = os.environ.get(ENV_KRB5CCNAME)
+
+        if ccache == DEFAULT_CCACHE:
+            # If user wants to use default ccache, existing KRB5CCNAME in
+            # current environment variable should be removed.
+            if self._original_krb5ccname:
+                del os.environ[ENV_KRB5CCNAME]
+        else:
+            # When not using default ccache to initialize new credential, let
+            # us point to the given ccache by KRB5CCNAME.
+            os.environ[ENV_KRB5CCNAME] = ccache
+
+        if self._cleaned_options['using_keytab']:
             self.init_with_keytab()
         else:
             self.init_with_password()
-
-        if ccache == DEFAULT_CCACHE:
-            if ENV_KRB5CCNAME in os.environ:
-                self.original_krb5ccname = os.environ[ENV_KRB5CCNAME]
-                del os.environ[ENV_KRB5CCNAME]
-        else:
-            self.original_krb5ccname = os.environ.get(ENV_KRB5CCNAME)
-            os.environ[ENV_KRB5CCNAME] = ccache
 
     def __enter__(self):
         """Initialize ccache when necessary before executing user code
@@ -271,13 +278,7 @@ class krbContext(object):
         Lock is acquired as well before user code executes.
         """
         self._init_lock.acquire()
-
-        init_required = self.need_init()
-
-        if init_required:
-            self._prepare_context()
-
-        self._initialized = True
+        self._prepare_context()
         return self
 
     def __exit__(self, exc_type, exc_value, traceback):
@@ -286,19 +287,19 @@ class krbContext(object):
         If ccache is reinitialized, original value of ``KRB5CCNAME`` will be
         restored correctly, if there was. And, lock gets released as well.
         """
-        if self._initialized:
-            # Restore original ccache, only when non-default ccache is used.
-            # krbcontext only saves and set KRB5CCNAME when non-default ccache
-            # is used, because Kerberos library is able to handle default one.
-            if self.original_krb5ccname:
-                # Originally, there might be KRB5CCNAME set, however, maybe
-                # not. So, krbcontext only needs to restore original ccache
-                # if it was set.
-                os.environ[ENV_KRB5CCNAME] = self.original_krb5ccname
+        try:
+            if self._cleaned_options['ccache'] == DEFAULT_CCACHE:
+                if self._original_krb5ccname:
+                    os.environ[ENV_KRB5CCNAME] = self._original_krb5ccname
+            else:
+                if self._original_krb5ccname:
+                    os.environ[ENV_KRB5CCNAME] = self._original_krb5ccname
+                else:
+                    del os.environ[ENV_KRB5CCNAME]
 
-        self.original_krb5ccname = None
-
-        self._init_lock.release()
+            self._original_krb5ccname = None
+        finally:
+            self._init_lock.release()
 
 
 # Backward compatibility
