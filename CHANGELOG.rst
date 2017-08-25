@@ -1,6 +1,12 @@
 ChangeLog
 =========
 
+0.4 (2017-08-26)
+================
+
+- Migrate to python-gssapi
+- Compatible with Python 3
+
 0.3.3 (2014-03-12)
 ------------------
 

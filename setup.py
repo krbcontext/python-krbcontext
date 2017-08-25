@@ -6,7 +6,7 @@ from setuptools import setup, find_packages
 def get_long_description():
     return '''%s
 
-%s''' % (open('README.rst', 'r').read(), open('CHANGES', 'r').read())
+%s''' % (open('README.rst', 'r').read(), open('CHANGELOG.rst', 'r').read())
 
 
 def get_install_requires():
@@ -22,14 +22,14 @@ def get_test_requires():
 
 setup(
     name='krbcontext',
-    version='0.3.3',
+    version='0.4',
     description='A Kerberos context manager',
     long_description=get_long_description(),
     keywords='kerberos context',
-    license='GPL',
+    license='GPLv3',
     author='Chenxiong Qi',
-    author_email='cqi@redhat.com',
-    url='https://github.com/krbcontext/krbcontext',
+    author_email='qcxhome@gmail.com',
+    url='https://github.com/krbcontext/python-krbcontext',
 
     packages=find_packages(),
 

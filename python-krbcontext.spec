@@ -1,12 +1,12 @@
 %define src_name krbcontext
-%define version 0.3.3
+%define version 0.4
 %define release 1
 
 Summary: A Kerberos context manager
 Name: python-%{src_name}
 Version: %{version}
 Release: %{release}%{?dist}
-Source0: %{src_name}-%{version}.tar.gz
+Source0: https://files.pythonhosted.org/packages/source/k/%{name}/%{src_name}-%{version}.tar.gz
 License: GPLv3
 Group: Development/Libraries
 Url: https://github.com/krbcontext/python-krbcontext
@@ -93,17 +93,20 @@ rm -rf $RPM_BUILD_ROOT
 
 %files -n python2-%{src_name}
 %defattr(-,root,root)
-%doc README.rst CHANGES LICENSE docs/
+%doc README.rst CHANGELOG.rst LICENSE docs/
 %{python2_sitelib}/krbcontext/
 %{python2_sitelib}/krbcontext-%{version}-*.egg-info
 
 %files -n python3-%{src_name}
 %defattr(-,root,root)
-%doc README.rst CHANGES LICENSE docs/
+%doc README.rst CHANGELOG.rst LICENSE docs/
 %{python3_sitelib}/krbcontext/
 %{python3_sitelib}/krbcontext-%{version}-*.egg-info
 
 %changelog
+* Sat Aug 26 2017 Chenxiong Qi <qcxhome@gmail.com> - 0.4-1
+- Migrate to python-gssapi
+- Compatible with Python 3
 
 * Thu Mar 13 2014 Chenxiong Qi <cqi@redhat.com> - 0.3.3-1
 - Change README.txt to README.rst
