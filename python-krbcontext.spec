@@ -1,11 +1,9 @@
 %define src_name krbcontext
-%define version 0.4
-%define release 1
 
 Summary: A Kerberos context manager
 Name: python-%{src_name}
-Version: %{version}
-Release: %{release}%{?dist}
+Version: 0.4
+Release: 1%{?dist}
 Source0: https://files.pythonhosted.org/packages/source/k/%{name}/%{src_name}-%{version}.tar.gz
 License: GPLv3
 Group: Development/Libraries
