@@ -1,6 +1,15 @@
 ChangeLog
 =========
 
+0.5 (2017-08-27)
+----------------
+
+- Add script for making release (Chenxiong Qi)
+- Add distcheck to Makefile (Chenxiong Qi)
+- Refine doc settings (Chenxiong Qi)
+- Easy to set project info (Chenxiong Qi)
+- Bump version to 4.0 in doc (Chenxiong Qi)
+
 0.4 (2017-08-26)
 ================
 

@@ -2,7 +2,7 @@
 
 Summary: A Kerberos context manager
 Name: python-%{src_name}
-Version: 0.4
+Version: 0.5
 Release: 1%{?dist}
 Source0: https://files.pythonhosted.org/packages/source/k/%{name}/%{src_name}-%{version}.tar.gz
 License: GPLv3
@@ -102,6 +102,13 @@ rm -rf $RPM_BUILD_ROOT
 %{python3_sitelib}/krbcontext-%{version}-*.egg-info
 
 %changelog
+* Sat Aug 26 2017 Chenxiong Qi <qcxhome@gmail.com> - 0.5-1
+- Add script for making release (Chenxiong Qi)
+- Add distcheck to Makefile (Chenxiong Qi)
+- Refine doc settings (Chenxiong Qi)
+- Easy to set project info (Chenxiong Qi)
+- Bump version to 4.0 in doc (Chenxiong Qi)
+
 * Sat Aug 26 2017 Chenxiong Qi <qcxhome@gmail.com> - 0.4-1
 - Migrate to python-gssapi
 - Compatible with Python 3
