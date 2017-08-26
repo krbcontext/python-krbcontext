@@ -21,7 +21,6 @@ Contents:
    api
    release-notes
 
-
 Indices and tables
 ==================
 

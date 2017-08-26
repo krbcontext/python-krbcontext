@@ -1,8 +1,8 @@
 Release Notes
 =============
 
-0.4
-===
+0.4 (2017-08-26)
+----------------
 
 Migrate to ``python-gssapi``. ``python-krbV`` is no longer used.
 
