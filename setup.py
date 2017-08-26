@@ -1,6 +1,12 @@
 # -*- coding: utf-8 -*-
 
-import krbcontext
+import os
+
+try:
+    import ConfigParser as configparser
+except ImportError:
+    import configparser
+
 from setuptools import setup, find_packages
 
 
@@ -20,11 +26,13 @@ def get_test_requires():
         return [package.strip() for package in fin
                 if not package.startswith('-r')]
 
+setup_cfg = configparser.RawConfigParser()
+setup_cfg.read(os.path.join(os.path.dirname(__file__), 'setup.cfg'))
 
-name = krbcontext.__name__
-version = krbcontext.__version__
-author = krbcontext.__author__
-
+name = setup_cfg.get('package', 'name')
+version = setup_cfg.get('package', 'version')
+author = setup_cfg.get('package', 'author')
+author_email = setup_cfg.get('package', 'author_email')
 
 setup(
     name=name,
@@ -34,7 +42,7 @@ setup(
     keywords='kerberos context',
     license='GPLv3',
     author=author,
-    author_email='qcxhome@gmail.com',
+    author_email=author_email,
     url='https://github.com/krbcontext/python-krbcontext',
 
     packages=find_packages(),

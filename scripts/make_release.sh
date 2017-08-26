@@ -2,20 +2,21 @@
 
 # TODO: rerunable without checkout changelog and version changes
 
+cd $(dirname $(realpath $0))/..
+
 release_dir=release
 test -e ${release_dir} || mkdir ${release_dir}
 
 specfile=python-krbcontext.spec
 
-name=$(python -c "import krbcontext; print(krbcontext.__name__)")
-rel_ver=$(python -c "import krbcontext; print(float(krbcontext.__version__) + 0.1)")
+name=$(python -c "import ConfigParser; cfg=ConfigParser.RawConfigParser(); cfg.read('setup.cfg'); print(cfg.get('package', 'name'))")
+rel_ver=$(python -c "import ConfigParser; cfg=ConfigParser.RawConfigParser(); cfg.read('setup.cfg'); print(float(cfg.get('package', 'version'))+0.1)")
 rel_date=$(date --rfc-3339='date')
 changelog_items=$(git log --format="- %s (%an)" HEAD...$(git describe --tags --abbrev=0))
 
-# Bump version
 function bump_version
 {
-    sed -i "s/__version__ = '[0-9]\+.[0-9]\+'/__version__ = '${rel_ver}'/" ${name}/__init__.py
+    sed -i "s/^version = [0-9]\+.[0-9]\+$/version = ${rel_ver}/" setup.cfg
 }
 
 function update_changelog_rst
