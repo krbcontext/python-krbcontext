@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
 
+import krbcontext
 from setuptools import setup, find_packages
 
 
@@ -20,14 +21,19 @@ def get_test_requires():
                 if not package.startswith('-r')]
 
 
+name = krbcontext.__name__
+version = krbcontext.__version__
+author = krbcontext.__author__
+
+
 setup(
-    name='krbcontext',
-    version='0.4',
+    name=name,
+    version=version,
     description='A Kerberos context manager',
     long_description=get_long_description(),
     keywords='kerberos context',
     license='GPLv3',
-    author='Chenxiong Qi',
+    author=author,
     author_email='qcxhome@gmail.com',
     url='https://github.com/krbcontext/python-krbcontext',
 
