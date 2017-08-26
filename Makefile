@@ -1,4 +1,5 @@
 sdist:
+	@test -e dist && rm -rf dist
 	@python setup.py sdist
 
 srpm: sdist
@@ -13,3 +14,8 @@ rpm: srpm
 
 check:
 	@tox
+
+doc:
+	@cd docs && make html
+
+distcheck: doc rpm
