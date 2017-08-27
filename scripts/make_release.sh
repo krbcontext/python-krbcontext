@@ -44,7 +44,7 @@ function update_spec_changelog
     rm .release-changelog
 }
 
-function make_release
+function gather_release_artifacts
 {
     cp dist/${name}-${rel_ver}.tar.gz ${release_dir}
 
@@ -56,10 +56,12 @@ function make_release
         | while read -r rpm_nvra arch; do
             cp dist/${arch}/${rpm_nvra}.rpm ${release_dir}
         done
+
+    cp -r docs/build/html/ ${release_dir}/docs
 }
 
 bump_version
 update_changelog_rst
 update_spec_changelog
 make rpm doc
-make_release
+gather_release_artifacts
