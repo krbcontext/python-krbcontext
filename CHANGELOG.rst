@@ -1,6 +1,11 @@
 ChangeLog
 =========
 
+0.6 (2017-08-27)
+----------------
+
+- Fix reading package info (Chenxiong Qi)
+
 0.5 (2017-08-27)
 ----------------
 

@@ -2,7 +2,7 @@
 
 Summary: A Kerberos context manager
 Name: python-%{src_name}
-Version: 0.5
+Version: 0.6
 Release: 1%{?dist}
 Source0: https://files.pythonhosted.org/packages/source/k/%{name}/%{src_name}-%{version}.tar.gz
 License: GPLv3
@@ -102,6 +102,9 @@ rm -rf $RPM_BUILD_ROOT
 %{python3_sitelib}/krbcontext-%{version}-*.egg-info
 
 %changelog
+* Sun Aug 27 2017 Chenxiong Qi <qcxhome@gmail.com> - 0.6-1
+- Fix reading package info (Chenxiong Qi)
+
 * Sat Aug 26 2017 Chenxiong Qi <qcxhome@gmail.com> - 0.5-1
 - Add script for making release (Chenxiong Qi)
 - Add distcheck to Makefile (Chenxiong Qi)
