@@ -134,11 +134,11 @@ class TestInitWithKeytab(unittest.TestCase):
                              principal=self.service_principal)
         context.init_with_keytab()
 
-        Credentials.has_calls(
+        Credentials.assert_has_calls([
             call(usage='initiate', name=self.princ_name),
             call(usage='initiate', name=self.princ_name,
                  store={'ccache': self.tmp_ccache}),
-        )
+        ])
         Credentials.return_value.store.assert_called_once_with(
             store=None,
             usage='initiate',
@@ -158,12 +158,13 @@ class TestInitWithKeytab(unittest.TestCase):
                              keytab_file=keytab)
         context.init_with_keytab()
 
-        Credentials.has_calls(
+        Credentials.assert_has_calls([
             call(usage='initiate', name=self.princ_name,
                  store={'client_keytab': keytab}),
             call(usage='initiate', name=self.princ_name,
-                 store={'ccache': self.tmp_ccache}),
-        )
+                 store={'ccache': self.tmp_ccache, 'client_keytab': keytab}),
+            call().store(usage='initiate', store=None, overwrite=True),
+        ])
         Credentials.return_value.store.assert_called_once_with(
             store=None,
             usage='initiate',
@@ -180,12 +181,12 @@ class TestInitWithKeytab(unittest.TestCase):
                              ccache_file=ccache)
         context.init_with_keytab()
 
-        Credentials.has_calls(
+        Credentials.assert_has_calls([
             call(usage='initiate', name=self.princ_name,
                  store={'ccache': ccache}),
             call(usage='initiate', name=self.princ_name,
                  store={'ccache': self.tmp_ccache}),
-        )
+        ])
         Credentials.return_value.store.assert_called_once_with(
             store={'ccache': ccache},
             usage='initiate',
@@ -205,12 +206,12 @@ class TestInitWithKeytab(unittest.TestCase):
                              ccache_file=ccache)
         context.init_with_keytab()
 
-        Credentials.has_calls(
+        Credentials.assert_has_calls([
             call(usage='initiate', name=self.princ_name,
                  store={'client_keytab': keytab, 'ccache': ccache}),
             call(usage='initiate', name=self.princ_name,
                  store={'client_keytab': keytab, 'ccache': self.tmp_ccache}),
-        )
+        ])
         Credentials.return_value.store.assert_called_once_with(
             store={'ccache': ccache},
             usage='initiate',

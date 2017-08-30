@@ -156,7 +156,7 @@ class krbContext(object):
 
         store = {}
         if self._cleaned_options['keytab'] != DEFAULT_KEYTAB:
-            store['keytab'] = self._cleaned_options['keytab']
+            store['client_keytab'] = self._cleaned_options['keytab']
         if self._cleaned_options['ccache'] != DEFAULT_CCACHE:
             store['ccache'] = self._cleaned_options['ccache']
         if store:
@@ -167,7 +167,7 @@ class krbContext(object):
             creds.lifetime
         except gssapi.exceptions.ExpiredCredentialsError:
             new_creds_opts = copy.deepcopy(creds_opts)
-            # Get new credential and put it into a temparory ccache
+            # Get new credential and put it into a temporary ccache
             if 'store' in new_creds_opts:
                 new_creds_opts['store']['ccache'] = _get_temp_ccache()
             else:
