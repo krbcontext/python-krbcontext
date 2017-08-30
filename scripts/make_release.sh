@@ -5,9 +5,11 @@
 cd $(dirname $(realpath $0))/..
 
 release_dir=release
-test -e ${release_dir} || mkdir ${release_dir}
-
 specfile=python-krbcontext.spec
+
+test -e ${release_dir} && rm -rf ${release_dir}
+mkdir ${release_dir}
+
 
 name=$(python -c "import ConfigParser; cfg=ConfigParser.RawConfigParser(); cfg.read('setup.cfg'); print(cfg.get('package', 'name'))")
 rel_ver=$(python -c "import ConfigParser; cfg=ConfigParser.RawConfigParser(); cfg.read('setup.cfg'); print(float(cfg.get('package', 'version'))+0.1)")
@@ -44,8 +46,11 @@ function update_spec_changelog
     rm .release-changelog
 }
 
+
 function gather_release_artifacts
 {
+    # Gather tarball and RPM packages into release directory.
+
     cp dist/${name}-${rel_ver}.tar.gz ${release_dir}
 
     local -r srpm_nvr=$(rpm -q --qf "%{NVR}\n" --specfile ${specfile} | head -n 1)
@@ -56,8 +61,6 @@ function gather_release_artifacts
         | while read -r rpm_nvra arch; do
             cp dist/${arch}/${rpm_nvra}.rpm ${release_dir}
         done
-
-    cp -r docs/build/html/ ${release_dir}/docs
 }
 
 bump_version

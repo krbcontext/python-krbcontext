@@ -30,6 +30,7 @@ define get_cur_rel_ver
 $(shell grep "^version = [0-9]\+\.[0-9]\+" setup.cfg | cut -d' ' -f3)
 endef
 
+
 release: distcheck
 	@sh -e scripts/make_release.sh
 	@echo
@@ -42,3 +43,13 @@ release: distcheck
 	@echo "twine-3 upload -u tkdchen release/krbcontext-$(call get_cur_rel_ver).tar.gz"
 	@echo "Push documentation to tkdchen.github.io"
 .PHONY: release
+
+
+publishpackages:
+	@sh -e scripts/publish-packages.sh
+.PHONY: publishpackages
+
+
+publishdoc: doc
+	@sh -e scripts/publish-doc.sh
+.PHONY: publishdoc
