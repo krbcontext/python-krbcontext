@@ -1,6 +1,14 @@
 ChangeLog
 =========
 
+0.7 (2017-08-30)
+----------------
+
+- Remove unused meta info (Chenxiong Qi)
+- Fix init_with_keytab and tests (Chenxiong Qi)
+- Add script for publishing packages (Chenxiong Qi)
+- Refine make release script (Chenxiong Qi)
+
 0.6 (2017-08-27)
 ----------------
 

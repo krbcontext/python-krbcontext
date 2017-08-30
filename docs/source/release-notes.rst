@@ -1,6 +1,15 @@
 Release Notes
 =============
 
+0.7 (2017-08-30)
+----------------
+
+Enhance scripts for making new release, publishing packages to PyPI, and
+building RPMs in Fedora Copr.
+
+Fix a bug in ``init_with_keytab`` that is ``client_keytab`` is not used
+correctly. And also fix tests to use ``assert_has_calls`` correctly.
+
 0.6 (2017-08-27)
 ----------------
 
