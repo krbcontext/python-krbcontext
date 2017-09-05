@@ -1,12 +1,11 @@
-%define src_name krbcontext
+%global src_name krbcontext
 
 Summary: A Kerberos context manager
 Name: python-%{src_name}
 Version: 0.7
 Release: 1%{?dist}
-Source0: https://files.pythonhosted.org/packages/source/k/%{name}/%{src_name}-%{version}.tar.gz
+Source0: https://files.pythonhosted.org/packages/source/k/%{src_name}/%{src_name}-%{version}.tar.gz
 License: GPLv3
-Group: Development/Libraries
 Url: https://github.com/krbcontext/python-krbcontext
 BuildArch: noarch
 
@@ -21,19 +20,32 @@ regular user's Kerberos name and password.
 You can use krbcontext as a context manager with with statement, or
 call API directly to check credential cache and even initialize by yourself.
 
+# Build Python 2 package for Fedora and only for RHEL7
+
 %package -n python2-%{src_name}
 Summary: A Kerberos context manager
 
+%if 0%{?rhel}
 BuildRequires: python-devel
 BuildRequires: python-setuptools
-BuildRequires: python-gssapi
 # For running test
-BuildRequires: python2-mock
 BuildRequires: python-flake8
-BuildRequires: python-pytest-cov
+BuildRequires: pytest
+# BuildRequires: python2-pytest-cov
+%else
+BuildRequires: python2-devel
+BuildRequires: python2-setuptools
+# For running test
+BuildRequires: python2-flake8
 BuildRequires: python2-pytest
+# BuildRequires: python-pytest-cov
+%endif
+
+BuildRequires: python-gssapi
+BuildRequires: python2-mock
 
 Requires: python-gssapi
+%{?python_provide:%python_provide python2-%{src_name}}
 
 %description -n python2-%{src_name}
 krbcontext provides a Kerberos context that you can put code inside, which
@@ -46,6 +58,9 @@ regular user's Kerberos name and password.
 You can use krbcontext as a context manager with with statement, or
 call API directly to check credential cache and even initialize by yourself.
 
+# Only build Python 3 package for Fedora
+
+%if 0%{?fedora}
 %package -n python3-%{src_name}
 Summary: A Kerberos context manager
 
@@ -56,9 +71,10 @@ BuildRequires: python3-gssapi
 BuildRequires: python3-flake8
 BuildRequires: python3-mock
 BuildRequires: python3-pytest
-BuildRequires: python3-pytest-cov
+#BuildRequires: python3-pytest-cov
 
 Requires: python3-gssapi
+%{?python_provide:%python_provide python%{python3_pkgversion}-%{src_name}}
 
 %description -n python3-%{src_name}
 krbcontext provides a Kerberos context that you can put code inside, which
@@ -71,35 +87,46 @@ regular user's Kerberos name and password.
 You can use krbcontext as a context manager with with statement, or
 call API directly to check credential cache and even initialize by yourself.
 
+%endif
+# end of Python 3 package
+
 %prep
 %setup -q -n %{src_name}-%{version}
 
 %build
 %py2_build
+
+%if 0%{?fedora}
 %py3_build
+%endif
 
 %install
 %py2_install
+
+%if 0%{?fedora}
 %py3_install
+%endif
 
 %check
-PYTHONPATH=. py.test test/
-PYTHONPATH=. py.test-3 test/
+PYTHONPATH=. py.test-%{python2_version} test/
 
-%clean
-rm -rf $RPM_BUILD_ROOT
+%if 0%{?fedora}
+PYTHONPATH=. py.test-%{python3_version} test/
+%endif
 
 %files -n python2-%{src_name}
-%defattr(-,root,root)
-%doc README.rst CHANGELOG.rst LICENSE docs/
+%doc README.rst CHANGELOG.rst docs/
+%license LICENSE
 %{python2_sitelib}/krbcontext/
 %{python2_sitelib}/krbcontext-%{version}-*.egg-info
 
+%if 0%{?fedora}
 %files -n python3-%{src_name}
-%defattr(-,root,root)
-%doc README.rst CHANGELOG.rst LICENSE docs/
+%doc README.rst CHANGELOG.rst docs/
+%license LICENSE
 %{python3_sitelib}/krbcontext/
 %{python3_sitelib}/krbcontext-%{version}-*.egg-info
+%endif
 
 %changelog
 * Wed Aug 30 2017 Chenxiong Qi <qcxhome@gmail.com> - 0.7-1
