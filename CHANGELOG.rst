@@ -1,6 +1,13 @@
 ChangeLog
 =========
 
+0.8 (2017-09-05)
+----------------
+
+- Fix SPEC (Chenxiong Qi)
+- Use __future__.absolute_import (Chenxiong Qi)
+- Fix and enhance maintanence scripts (Chenxiong Qi)
+
 0.7 (2017-08-30)
 ----------------
 

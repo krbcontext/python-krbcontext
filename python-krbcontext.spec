@@ -2,7 +2,7 @@
 
 Summary: A Kerberos context manager
 Name: python-%{src_name}
-Version: 0.7
+Version: 0.8
 Release: 1%{?dist}
 Source0: https://files.pythonhosted.org/packages/source/k/%{src_name}/%{src_name}-%{version}.tar.gz
 License: GPLv3
@@ -129,6 +129,11 @@ PYTHONPATH=. py.test-%{python3_version} test/
 %endif
 
 %changelog
+* Tue Sep 05 2017 Chenxiong Qi <qcxhome@gmail.com> - 0.8-1
+- Fix SPEC (Chenxiong Qi)
+- Use __future__.absolute_import (Chenxiong Qi)
+- Fix and enhance maintanence scripts (Chenxiong Qi)
+
 * Wed Aug 30 2017 Chenxiong Qi <qcxhome@gmail.com> - 0.7-1
 - Remove unused meta info (Chenxiong Qi)
 - Fix init_with_keytab and tests (Chenxiong Qi)

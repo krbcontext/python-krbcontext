@@ -1,6 +1,18 @@
 Release Notes
 =============
 
+0.8 (2017-09-05)
+----------------
+
+SPEC file passes package review in Fedora and ``python-krbcontext`` is now a
+new Fedora package. SPEC file is updated according to review feedback from
+Fedora packager. From this update, ``python-krbcontext`` RPMs will be built for
+current supported Fedora releases as well as ``epel7``.
+
+Use ``__future__.absolute_import`` in ``krbcontext.__init__``.
+
+New script for publishing documentation.
+
 0.7 (2017-08-30)
 ----------------
 
