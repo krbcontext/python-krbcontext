@@ -3,7 +3,7 @@
 Summary: A Kerberos context manager
 Name: python-%{src_name}
 Version: 0.8
-Release: 1%{?dist}
+Release: 2%{?dist}
 Source0: https://files.pythonhosted.org/packages/source/k/%{src_name}/%{src_name}-%{version}.tar.gz
 License: GPLv3
 Url: https://github.com/krbcontext/python-krbcontext
@@ -29,14 +29,12 @@ Summary: A Kerberos context manager
 BuildRequires: python-devel
 BuildRequires: python-setuptools
 # For running test
-BuildRequires: python-flake8
 BuildRequires: pytest
 # BuildRequires: python2-pytest-cov
 %else
 BuildRequires: python2-devel
 BuildRequires: python2-setuptools
 # For running test
-BuildRequires: python2-flake8
 BuildRequires: python2-pytest
 # BuildRequires: python-pytest-cov
 %endif
@@ -68,7 +66,6 @@ BuildRequires: python3-setuptools
 BuildRequires: python3-devel
 BuildRequires: python3-gssapi
 # For running test
-BuildRequires: python3-flake8
 BuildRequires: python3-mock
 BuildRequires: python3-pytest
 #BuildRequires: python3-pytest-cov
@@ -129,6 +126,9 @@ PYTHONPATH=. py.test-%{python3_version} test/
 %endif
 
 %changelog
+* Thu Sep 07 2017 Chenxiong Qi <qcxhome@gmail.com> - 0.8-2
+- Remove flake8 from BuildRequires
+
 * Tue Sep 05 2017 Chenxiong Qi <qcxhome@gmail.com> - 0.8-1
 - Fix SPEC (Chenxiong Qi)
 - Use __future__.absolute_import (Chenxiong Qi)
