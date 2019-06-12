@@ -103,17 +103,18 @@ class TestInitWithKeytab(unittest.TestCase):
         self.Lock.start()
 
         # No need to create a real temp file for tests
-        self.tmp_ccache = 'tmp-ccache'
-        self.mkstemp = patch('tempfile.mkstemp',
-                             return_value=(1, self.tmp_ccache))
-        self.mkstemp.start()
+        self.tmp_dir = '/tmp/test-krbcontext'
+        self.tmp_ccache = os.path.join(self.tmp_dir, 'ccache')
+        self.mkdtemp = patch('tempfile.mkdtemp',
+                             return_value=self.tmp_dir)
+        self.mkdtemp.start()
 
         self.os_close = patch('os.close')
         self.os_close.start()
 
     def tearDown(self):
         self.os_close.stop()
-        self.mkstemp.stop()
+        self.mkdtemp.stop()
         self.Lock.stop()
 
     @patch('gssapi.creds.Credentials')
