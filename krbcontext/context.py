@@ -20,6 +20,7 @@ import getpass
 import os
 import pwd
 import sys
+import shutil
 import tempfile
 
 import gssapi
@@ -37,16 +38,6 @@ ENV_KRB5CCNAME = 'KRB5CCNAME'
 def get_login():
     """Get current effective user name"""
     return pwd.getpwuid(os.getuid()).pw_name
-
-
-def _get_temp_ccache():
-    """Create a temporary file
-
-    :return: file name of created temporary file.
-    """
-    fd, filename = tempfile.mkstemp('krbcontext-tmp-ccache-')
-    os.close(fd)
-    return filename
 
 
 class krbContext(object):
@@ -168,19 +159,21 @@ class krbContext(object):
         except gssapi.exceptions.ExpiredCredentialsError:
             new_creds_opts = copy.deepcopy(creds_opts)
             # Get new credential and put it into a temporary ccache
-            if 'store' in new_creds_opts:
-                new_creds_opts['store']['ccache'] = _get_temp_ccache()
-            else:
-                new_creds_opts['store'] = {'ccache': _get_temp_ccache()}
-            creds = gssapi.creds.Credentials(**new_creds_opts)
-            # Then, store new credential back to original specified ccache,
-            # whatever a given ccache file or the default one.
-            _store = None
-            # If default cccache is used, no need to specify ccache in store
-            # parameter passed to ``creds.store``.
-            if self._cleaned_options['ccache'] != DEFAULT_CCACHE:
-                _store = {'ccache': store['ccache']}
-            creds.store(usage='initiate', store=_store, overwrite=True)
+            temp_directory = tempfile.mkdtemp('-krbcontext')
+            temp_ccache = os.path.join(temp_directory, 'ccache')
+            try:
+                new_creds_opts.setdefault('store', {})['ccache'] = temp_ccache
+                creds = gssapi.creds.Credentials(**new_creds_opts)
+                # Then, store new credential back to original specified ccache,
+                # whatever a given ccache file or the default one.
+                _store = None
+                # If default cccache is used, no need to specify ccache in
+                # store parameter passed to ``creds.store``.
+                if self._cleaned_options['ccache'] != DEFAULT_CCACHE:
+                    _store = {'ccache': store['ccache']}
+                creds.store(usage='initiate', store=_store, overwrite=True)
+            finally:
+                shutil.rmtree(temp_directory, ignore_errors=True)
 
     def init_with_password(self):
         """Initialize credential cache with password
