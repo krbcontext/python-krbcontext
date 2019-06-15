@@ -167,7 +167,7 @@ class krbContext(object):
                 # Then, store new credential back to original specified ccache,
                 # whatever a given ccache file or the default one.
                 _store = None
-                # If default cccache is used, no need to specify ccache in
+                # If default ccache is used, no need to specify ccache in
                 # store parameter passed to ``creds.store``.
                 if self._cleaned_options['ccache'] != DEFAULT_CCACHE:
                     _store = {'ccache': store['ccache']}
