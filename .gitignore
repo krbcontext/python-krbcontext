@@ -10,8 +10,10 @@ dist/
 htmlcov/
 docs/build/
 build/
+.env/
 .tox/
 .vagrant/
+.vscode/
 
 README.html
 tags
