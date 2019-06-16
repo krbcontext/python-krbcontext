@@ -1,14 +1,13 @@
 #!/bin/bash
 
-cd "$(dirname $(realpath $0))/../"
+script_dir="$(dirname $(realpath "$0"))"
+pypi_username=tkdchen
 
-RELEASE_DIR="$(realpath release)"
-SPEC=python-krbcontext.spec
+. "$script_dir/util.sh"
 
-name=$(python -c "import ConfigParser; cfg=ConfigParser.RawConfigParser(); cfg.read('setup.cfg'); print(cfg.get('package', 'name'))")
-rel_ver=$(python -c "import ConfigParser; cfg=ConfigParser.RawConfigParser(); cfg.read('setup.cfg'); print(cfg.get('package', 'version'))")
+cd "$script_dir/.."
 
-twine upload -u tkdchen "${RELEASE_DIR}/${name}-${rel_ver}.tar.gz"
+tarball_file="dist/${package_name}-${package_rel_ver}.tar.gz"
 
-srpm_nvr=$(rpm -q --qf "%{NVR}\n" --specfile ${SPEC} | head -n 1)
-copr-cli --config ~/.config/copr-fedora build cqi/python-krbcontext "${RELEASE_DIR}/${srpm_nvr}.src.rpm"
+[[ -e "$tarball_file" ]] || python setup.py sdist
+twine upload -u "$pypi_username" "$tarball_file"

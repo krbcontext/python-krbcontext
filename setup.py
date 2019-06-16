@@ -2,10 +2,11 @@
 
 import os
 
+# Python 2 and 3 compatibility
 try:
-    import ConfigParser as configparser
+    from ConfigParser import ConfigParser
 except ImportError:
-    import configparser
+    from configparser import ConfigParser
 
 from setuptools import setup, find_packages
 
@@ -26,7 +27,8 @@ def get_test_requires():
         return [package.strip() for package in fin
                 if not package.startswith('-r')]
 
-setup_cfg = configparser.RawConfigParser()
+
+setup_cfg = ConfigParser()
 setup_cfg.read(os.path.join(os.path.dirname(__file__), 'setup.cfg'))
 
 name = setup_cfg.get('package', 'name')
