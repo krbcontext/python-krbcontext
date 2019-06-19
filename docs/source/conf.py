@@ -22,11 +22,11 @@ package_root = os.path.abspath('../../')
 sys.path.insert(0, package_root)
 
 try:
-    import ConfigParser as configparser
+    from ConfigParser import ConfigParser
 except ImportError:
-    import configparser
+    from configparser import ConfigParser
 
-setup_cfg = configparser.RawConfigParser()
+setup_cfg = ConfigParser()
 setup_cfg.read(os.path.join(package_root, 'setup.cfg'))
 
 # -- General configuration ------------------------------------------------
