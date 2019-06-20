@@ -1,11 +1,19 @@
 krbcontext
 ==========
 
+.. image:: https://img.shields.io/pypi/v/krbcontext.svg
+   :alt: PyPI
+   :target: https://pypi.org/project/krbcontext/
+
+.. image:: https://img.shields.io/pypi/pyversions/krbcontext.svg
+   :alt: PyPI - Python Version
+   :target: https://pypi.org/project/krbcontext/
+
 .. image:: https://travis-ci.org/krbcontext/python-krbcontext.svg?branch=master
-    :target: https://travis-ci.org/krbcontext/python-krbcontext
+   :target: https://travis-ci.org/krbcontext/python-krbcontext
 
 .. image:: https://codecov.io/gh/krbcontext/python-krbcontext/branch/master/graph/badge.svg
-  :target: https://codecov.io/gh/krbcontext/python-krbcontext
+   :target: https://codecov.io/gh/krbcontext/python-krbcontext
 
 ``krbcontext`` provides a Kerberos context that you can put code inside, which
 requires a valid ticket in credential cache.

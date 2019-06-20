@@ -1,6 +1,20 @@
 ChangeLog
 =========
 
+0.9 (2019-06-20)
+----------------
+
+- Fix .travis.yml to use Python 3.7 (Chenxiong Qi)
+- Update docs/source/conf.py to read package info properly (Chenxiong Qi)
+- Add Python 3.7 to and remove Python 3.5 from TravisCI (Chenxiong Qi)
+- Update scripts (Chenxiong Qi)
+- Ignore more directories from git (Chenxiong Qi)
+- Remove testenv py34 and py35 (Chenxiong Qi)
+- Add testenv py37 (Chenxiong Qi)
+- Fix typo in comment (Chenxiong Qi)
+- Fix renewing expired FILE ccache (Michael Simacek)
+- Remove flake8 from BuildRequires from SPEC (Chenxiong Qi)
+
 0.8 (2017-09-05)
 ----------------
 

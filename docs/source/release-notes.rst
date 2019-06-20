@@ -1,6 +1,18 @@
 Release Notes
 =============
 
+0.9 (2019-06-20)
+----------------
+
+A major bug `#23`_ is fixed by Michael Simacek.
+
+``py34`` and ``py35`` are removed from tox testenv, meanwhile ``py37`` is
+added.
+
+There are massive fixes to helper scripts under directory ``scripts/``.
+
+.. _#23: https://github.com/krbcontext/python-krbcontext/issues/23
+
 0.8 (2017-09-05)
 ----------------
 
