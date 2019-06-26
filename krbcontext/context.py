@@ -171,7 +171,8 @@ class krbContext(object):
                 # store parameter passed to ``creds.store``.
                 if self._cleaned_options['ccache'] != DEFAULT_CCACHE:
                     _store = {'ccache': store['ccache']}
-                creds.store(usage='initiate', store=_store, overwrite=True)
+                creds.store(usage='initiate', store=_store, set_default=True,
+                            overwrite=True)
             finally:
                 shutil.rmtree(temp_directory, ignore_errors=True)
 

@@ -143,6 +143,7 @@ class TestInitWithKeytab(unittest.TestCase):
         Credentials.return_value.store.assert_called_once_with(
             store=None,
             usage='initiate',
+            set_default=True,
             overwrite=True)
 
     @patch('gssapi.creds.Credentials')
@@ -164,11 +165,13 @@ class TestInitWithKeytab(unittest.TestCase):
                  store={'client_keytab': keytab}),
             call(usage='initiate', name=self.princ_name,
                  store={'ccache': self.tmp_ccache, 'client_keytab': keytab}),
-            call().store(usage='initiate', store=None, overwrite=True),
+            call().store(usage='initiate', store=None,
+                         set_default=True, overwrite=True),
         ])
         Credentials.return_value.store.assert_called_once_with(
             store=None,
             usage='initiate',
+            set_default=True,
             overwrite=True)
 
     @patch('gssapi.creds.Credentials')
@@ -191,6 +194,7 @@ class TestInitWithKeytab(unittest.TestCase):
         Credentials.return_value.store.assert_called_once_with(
             store={'ccache': ccache},
             usage='initiate',
+            set_default=True,
             overwrite=True)
 
     @patch('gssapi.creds.Credentials')
@@ -216,6 +220,7 @@ class TestInitWithKeytab(unittest.TestCase):
         Credentials.return_value.store.assert_called_once_with(
             store={'ccache': ccache},
             usage='initiate',
+            set_default=True,
             overwrite=True)
 
 
