@@ -1,6 +1,13 @@
 Release Notes
 =============
 
+0.10 (2019-07-15)
+-----------------
+
+A bugfix release, refer to `PR#28`_. Thanks Michael Simacek.
+
+.. _PR#28: https://github.com/krbcontext/python-krbcontext/pull/28
+
 0.9 (2019-06-20)
 ----------------
 

@@ -1,6 +1,11 @@
 ChangeLog
 =========
 
+0.10 (2019-07-15)
+-----------------
+
+- Use set_default when storing credentials (Michael Simacek)
+
 0.9 (2019-06-20)
 ----------------
 
