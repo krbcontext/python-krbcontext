@@ -1,13 +1,7 @@
 # -*- coding: utf-8 -*-
 
 import os
-
-# Python 2 and 3 compatibility
-try:
-    from ConfigParser import ConfigParser
-except ImportError:
-    from configparser import ConfigParser
-
+from configparser import ConfigParser
 from setuptools import setup, find_packages
 
 
@@ -61,8 +55,6 @@ setup(
         'License :: OSI Approved :: GNU General Public License (GPL)',
         'Operating System :: POSIX',
         'Programming Language :: Python',
-        'Programming Language :: Python :: 2',
-        'Programming Language :: Python :: 2.7',
         'Programming Language :: Python :: 3',
         'Programming Language :: Python :: 3.6',
         'Programming Language :: Python :: 3.7',
