@@ -220,7 +220,7 @@ class krbContext(object):
                 password = getpass.getpass()
 
             cred = gssapi.raw.acquire_cred_with_password(
-                self._cleaned_options['principal'], password)
+                self._cleaned_options['principal'], password.encode('utf-8'))
 
             ccache = self._cleaned_options['ccache']
             if ccache == DEFAULT_CCACHE:

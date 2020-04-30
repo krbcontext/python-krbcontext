@@ -260,7 +260,7 @@ class TestInitWithPassword(unittest.TestCase):
         context.init_with_password()
 
         acquire_cred_with_password.assert_called_once_with(
-            self.princ_name, 'security')
+            self.princ_name, b'security')
 
         store_cred.assert_called_once_with(
             acquire_cred_with_password.return_value.creds,
@@ -288,7 +288,7 @@ class TestInitWithPassword(unittest.TestCase):
                 store={'ccache': ccache})
 
         acquire_cred_with_password.assert_called_once_with(
-            self.princ_name, 'security')
+            self.princ_name, b'security')
 
         store_cred_into.assert_called_once_with(
             {'ccache': '/tmp/mycc'},
@@ -320,7 +320,7 @@ class TestInitWithPassword(unittest.TestCase):
                                             name=self.princ_name)
 
         acquire_cred_with_password.assert_called_once_with(
-            self.princ_name, 'mypassword')
+            self.princ_name, b'mypassword')
 
         store_cred.assert_called_once_with(
             acquire_cred_with_password.return_value.creds,
