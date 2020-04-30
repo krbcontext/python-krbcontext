@@ -264,8 +264,8 @@ class TestInitWithPassword(unittest.TestCase):
 
         store_cred.assert_called_once_with(
             acquire_cred_with_password.return_value.creds,
-            usage='initiate',
-            overwrite=True)
+            usage='initiate', overwrite=True, set_default=True
+        )
 
     @patch('gssapi.creds.Credentials')
     @patch('gssapi.raw.acquire_cred_with_password')
@@ -324,8 +324,8 @@ class TestInitWithPassword(unittest.TestCase):
 
         store_cred.assert_called_once_with(
             acquire_cred_with_password.return_value.creds,
-            usage='initiate',
-            overwrite=True)
+            usage='initiate', overwrite=True, set_default=True
+        )
 
     @patch('gssapi.creds.Credentials')
     @patch('sys.stdin.isatty', return_value=False)

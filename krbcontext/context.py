@@ -224,9 +224,10 @@ class krbContext(object):
 
             ccache = self._cleaned_options['ccache']
             if ccache == DEFAULT_CCACHE:
-                gssapi.raw.store_cred(cred.creds,
-                                      usage='initiate',
-                                      overwrite=True)
+                gssapi.raw.store_cred(
+                    cred.creds,
+                    usage='initiate', overwrite=True, set_default=True,
+                )
             else:
                 gssapi.raw.store_cred_into({'ccache': ccache},
                                            cred.creds,
