@@ -121,8 +121,7 @@ class krbContext(object):
             if keytab_file is None:
                 cleaned['keytab'] = DEFAULT_KEYTAB
             elif not os.path.exists(keytab_file):
-                raise ValueError(
-                    'Keytab file {0} does not exist.'.format(keytab_file))
+                raise ValueError(f'Keytab file {keytab_file} does not exist.')
             else:
                 cleaned['keytab'] = keytab_file
         else:
