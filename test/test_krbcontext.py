@@ -5,7 +5,7 @@ import unittest
 
 import gssapi
 
-from mock import call, patch, PropertyMock
+from unittest.mock import call, patch, PropertyMock
 
 import krbcontext.context as kctx
 from krbcontext.context import krbContext
