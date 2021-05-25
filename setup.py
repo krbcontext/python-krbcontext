@@ -10,18 +10,6 @@ def get_long_description():
 
 %s''' % (open('README.rst', 'r').read(), open('CHANGELOG.rst', 'r').read())
 
-
-def get_install_requires():
-    with open('requirements.txt', 'r') as fin:
-        return [package.strip() for package in fin]
-
-
-def get_test_requires():
-    with open('test-requirements.txt', 'r') as fin:
-        return [package.strip() for package in fin
-                if not package.startswith('-r')]
-
-
 setup_cfg = ConfigParser()
 setup_cfg.read(os.path.join(os.path.dirname(__file__), 'setup.cfg'))
 
@@ -42,8 +30,10 @@ setup(
     url='https://github.com/krbcontext/python-krbcontext',
     packages=find_packages(),
     python_requires='>=3.6',
-    install_requires=get_install_requires(),
-    tests_require=get_test_requires(),
+    install_requires=["gssapi"],
+    extras_require={
+        "tests": ["flake8", "mock", "pytest", "pytest-cov"],
+    },
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Environment :: Console',
