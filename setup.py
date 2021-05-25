@@ -40,12 +40,10 @@ setup(
     author=author,
     author_email=author_email,
     url='https://github.com/krbcontext/python-krbcontext',
-
     packages=find_packages(),
-
+    python_requires='>=3.6',
     install_requires=get_install_requires(),
     tests_require=get_test_requires(),
-
     classifiers=[
         'Development Status :: 5 - Production/Stable',
         'Environment :: Console',
