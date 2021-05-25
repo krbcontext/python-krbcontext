@@ -52,4 +52,9 @@ setup(
         'Topic :: Software Development :: Libraries :: Python Modules',
         'Topic :: System :: Systems Administration',
     ],
+    project_urls={
+        'Issue Reports': 'https://github.com/krbcontext/python-krbcontext/issues',
+        'Source': 'https://github.com/krbcontext/python-krbcontext/',
+        'Documentation': 'https://krbcontext.github.io/',
+    },
 )
