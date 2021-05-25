@@ -32,7 +32,7 @@ setup(
     python_requires='>=3.6',
     install_requires=["gssapi"],
     extras_require={
-        "tests": ["flake8", "mock", "pytest", "pytest-cov"],
+        "tests": ["pytest", "pytest-cov"],
     },
     classifiers=[
         'Development Status :: 5 - Production/Stable',
