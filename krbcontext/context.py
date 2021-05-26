@@ -115,8 +115,8 @@ class krbContext(object):
         if using_keytab:
             if principal is None:
                 raise ValueError('Principal is required when using key table.')
-            princ_name = gssapi.names.Name(
-                principal, gssapi.names.NameType.kerberos_principal)
+            princ_name = gssapi.Name(
+                principal, gssapi.NameType.kerberos_principal)
 
             if keytab_file is None:
                 cleaned['keytab'] = DEFAULT_KEYTAB
@@ -127,8 +127,7 @@ class krbContext(object):
         else:
             if principal is None:
                 principal = get_login()
-            princ_name = gssapi.names.Name(principal,
-                                           gssapi.names.NameType.user)
+            princ_name = gssapi.Name(principal, gssapi.NameType.user)
 
         cleaned['using_keytab'] = using_keytab
         cleaned['principal'] = princ_name
@@ -152,7 +151,7 @@ class krbContext(object):
         if store:
             creds_opts['store'] = store
 
-        creds = gssapi.creds.Credentials(**creds_opts)
+        creds = gssapi.Credentials(**creds_opts)
         try:
             creds.lifetime
         except gssapi.exceptions.ExpiredCredentialsError:
@@ -162,7 +161,7 @@ class krbContext(object):
             temp_ccache = os.path.join(temp_directory, 'ccache')
             try:
                 new_creds_opts.setdefault('store', {})['ccache'] = temp_ccache
-                creds = gssapi.creds.Credentials(**new_creds_opts)
+                creds = gssapi.Credentials(**new_creds_opts)
                 # Then, store new credential back to original specified ccache,
                 # whatever a given ccache file or the default one.
                 _store = None
@@ -195,7 +194,7 @@ class krbContext(object):
         if self._cleaned_options['ccache'] != DEFAULT_CCACHE:
             creds_opts['store'] = {'ccache': self._cleaned_options['ccache']}
 
-        cred = gssapi.creds.Credentials(**creds_opts)
+        cred = gssapi.Credentials(**creds_opts)
         try:
             cred.lifetime
         except gssapi.exceptions.ExpiredCredentialsError:
