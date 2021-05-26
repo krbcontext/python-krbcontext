@@ -23,9 +23,9 @@ class CleanArgumetsUsingKeytabTest(unittest.TestCase):
                              principal='HTTP/hostname@EXAMPLE.COM')
 
         self.assertTrue(context._cleaned_options['using_keytab'])
-        expected_princ = gssapi.names.Name(
+        expected_princ = gssapi.Name(
             'HTTP/hostname@EXAMPLE.COM',
-            gssapi.names.NameType.kerberos_principal)
+            gssapi.NameType.kerberos_principal)
         self.assertEqual(expected_princ, context._cleaned_options['principal'])
         self.assertEqual(kctx.DEFAULT_CCACHE,
                          context._cleaned_options['ccache'])
@@ -69,8 +69,8 @@ class CleanArgumentsAsRegularUserTest(unittest.TestCase):
 
         context = krbContext()
 
-        expected_princ = gssapi.names.Name(get_login.return_value,
-                                           gssapi.names.NameType.user)
+        expected_princ = gssapi.Name(get_login.return_value,
+                                     gssapi.NameType.user)
         self.assertEqual(expected_princ,
                          context._cleaned_options['principal'])
         self.assertEqual(kctx.DEFAULT_CCACHE,
@@ -85,7 +85,7 @@ class CleanArgumentsAsRegularUserTest(unittest.TestCase):
 
     def test_specify_principal(self):
         context = krbContext(principal='cqi')
-        expected_princ = gssapi.names.Name('cqi', gssapi.names.NameType.user)
+        expected_princ = gssapi.Name('cqi', gssapi.names.NameType.user)
         self.assertEqual(expected_princ,
                          context._cleaned_options['principal'])
 
@@ -95,9 +95,9 @@ class TestInitWithKeytab(unittest.TestCase):
 
     def setUp(self):
         self.service_principal = 'HTTP/hostname@EXAMPLE.COM'
-        self.princ_name = gssapi.names.Name(
+        self.princ_name = gssapi.Name(
             self.service_principal,
-            gssapi.names.NameType.kerberos_principal)
+            gssapi.NameType.kerberos_principal)
 
         self.Lock = patch('krbcontext.context.Lock')
         self.Lock.start()
@@ -117,7 +117,7 @@ class TestInitWithKeytab(unittest.TestCase):
         self.mkdtemp.stop()
         self.Lock.stop()
 
-    @patch('gssapi.creds.Credentials')
+    @patch('gssapi.Credentials')
     def test_cred_not_expired(self, Credentials):
         context = krbContext(using_keytab=True,
                              principal=self.service_principal)
@@ -126,7 +126,7 @@ class TestInitWithKeytab(unittest.TestCase):
         self.assertEqual(1, Credentials.call_count)
         Credentials.return_value.store.assert_not_called()
 
-    @patch('gssapi.creds.Credentials')
+    @patch('gssapi.Credentials')
     def test_init_in_default_ccache_with_default_keytab(self, Credentials):
         type(Credentials.return_value).lifetime = PropertyMock(
             side_effect=gssapi.exceptions.ExpiredCredentialsError(1, 1))
@@ -146,7 +146,7 @@ class TestInitWithKeytab(unittest.TestCase):
             set_default=True,
             overwrite=True)
 
-    @patch('gssapi.creds.Credentials')
+    @patch('gssapi.Credentials')
     @patch('os.path.exists', return_value=True)
     def test_init_in_default_ccache_with_given_keytab(self,
                                                       exists,
@@ -174,7 +174,7 @@ class TestInitWithKeytab(unittest.TestCase):
             set_default=True,
             overwrite=True)
 
-    @patch('gssapi.creds.Credentials')
+    @patch('gssapi.Credentials')
     def test_init_in_given_ccache_with_default_keytab(self, Credentials):
         type(Credentials.return_value).lifetime = PropertyMock(
             side_effect=gssapi.exceptions.ExpiredCredentialsError(1, 1))
@@ -197,7 +197,7 @@ class TestInitWithKeytab(unittest.TestCase):
             set_default=True,
             overwrite=True)
 
-    @patch('gssapi.creds.Credentials')
+    @patch('gssapi.Credentials')
     @patch('os.path.exists', return_value=True)
     def test_init_with_given_keytab_and_ccache(self, exists, Credentials):
         type(Credentials.return_value).lifetime = PropertyMock(
@@ -229,10 +229,9 @@ class TestInitWithPassword(unittest.TestCase):
 
     def setUp(self):
         self.principal = 'cqi'
-        self.princ_name = gssapi.names.Name(self.principal,
-                                            gssapi.names.NameType.user)
+        self.princ_name = gssapi.Name(self.principal, gssapi.NameType.user)
 
-    @patch('gssapi.creds.Credentials')
+    @patch('gssapi.Credentials')
     @patch('gssapi.raw.acquire_cred_with_password')
     @patch('gssapi.raw.store_cred_into')
     def test_no_need_init_if_not_expired(
@@ -246,7 +245,7 @@ class TestInitWithPassword(unittest.TestCase):
         store_cred_into.assert_not_called()
         acquire_cred_with_password.assert_not_called()
 
-    @patch('gssapi.creds.Credentials')
+    @patch('gssapi.Credentials')
     @patch('gssapi.raw.acquire_cred_with_password')
     @patch('gssapi.raw.store_cred')
     def test_init_in_default_ccache(
@@ -267,7 +266,7 @@ class TestInitWithPassword(unittest.TestCase):
             usage='initiate', overwrite=True, set_default=True
         )
 
-    @patch('gssapi.creds.Credentials')
+    @patch('gssapi.Credentials')
     @patch('gssapi.raw.acquire_cred_with_password')
     @patch('gssapi.raw.store_cred_into')
     def test_init_in_given_ccache(
@@ -296,7 +295,7 @@ class TestInitWithPassword(unittest.TestCase):
             usage='initiate',
             overwrite=True)
 
-    @patch('gssapi.creds.Credentials')
+    @patch('gssapi.Credentials')
     @patch('sys.stdin.isatty', return_value=True)
     @patch('getpass.getpass')
     @patch('gssapi.raw.acquire_cred_with_password')
@@ -327,7 +326,7 @@ class TestInitWithPassword(unittest.TestCase):
             usage='initiate', overwrite=True, set_default=True
         )
 
-    @patch('gssapi.creds.Credentials')
+    @patch('gssapi.Credentials')
     @patch('sys.stdin.isatty', return_value=False)
     def test_init_with_entering_password_but_not_in_atty(self,
                                                          isatty,
@@ -355,7 +354,7 @@ class TestKrbContextManager(unittest.TestCase):
     def tearDown(self):
         self.init_Lock.stop()
 
-    @patch('gssapi.creds.Credentials')
+    @patch('gssapi.Credentials')
     @patch.dict('os.environ', {}, clear=True)
     def test_init_with_default_keytab(self, Credentials):
         type(Credentials.return_value).lifetime = PropertyMock(
@@ -366,7 +365,7 @@ class TestKrbContextManager(unittest.TestCase):
                         ccache_file='/tmp/my_cc'):
             self.assertEqual('/tmp/my_cc', os.environ['KRB5CCNAME'])
 
-    @patch('gssapi.creds.Credentials')
+    @patch('gssapi.Credentials')
     @patch('gssapi.raw.acquire_cred_with_password')
     @patch('gssapi.raw.store_cred')
     @patch.dict('os.environ', {}, clear=True)
@@ -382,7 +381,7 @@ class TestKrbContextManager(unittest.TestCase):
 
         self.assertNotIn('KRB5CCNAME', os.environ)
 
-    @patch('gssapi.creds.Credentials')
+    @patch('gssapi.Credentials')
     @patch('gssapi.raw.acquire_cred_with_password')
     @patch('gssapi.raw.store_cred')
     @patch.dict('os.environ', {'KRB5CCNAME': '/tmp/my_cc'}, clear=True)
@@ -399,7 +398,7 @@ class TestKrbContextManager(unittest.TestCase):
         self.assertIn('KRB5CCNAME', os.environ)
         self.assertEqual('/tmp/my_cc', os.environ['KRB5CCNAME'])
 
-    @patch('gssapi.creds.Credentials')
+    @patch('gssapi.Credentials')
     @patch.dict('os.environ', {'KRB5CCNAME': '/tmp/my_cc'}, clear=True)
     def test_original_ccache_should_be_restored(self, Credentials):
         type(Credentials.return_value).lifetime = PropertyMock(
@@ -414,7 +413,7 @@ class TestKrbContextManager(unittest.TestCase):
         self.assertIn('KRB5CCNAME', os.environ)
         self.assertEqual('/tmp/my_cc', os.environ['KRB5CCNAME'])
 
-    @patch('gssapi.creds.Credentials')
+    @patch('gssapi.Credentials')
     @patch.dict('os.environ', {}, clear=True)
     def test_init_in_default_ccache_without_original_krb5ccname_is_set(
             self, Credentials):
@@ -428,7 +427,7 @@ class TestKrbContextManager(unittest.TestCase):
         # Originally, no KRB5CCNAME is set, it should be cleaned after exit.
         self.assertNotIn('KRB5CCNAME', os.environ)
 
-    @patch('gssapi.creds.Credentials')
+    @patch('gssapi.Credentials')
     @patch.dict('os.environ', {'KRB5CCNAME': '/tmp/my_cc'}, clear=True)
     def test_init_in_default_ccache_and_original_krb5ccname_is_set(
             self, Credentials):
@@ -442,7 +441,7 @@ class TestKrbContextManager(unittest.TestCase):
         self.assertIn('KRB5CCNAME', os.environ)
         self.assertEqual('/tmp/my_cc', os.environ['KRB5CCNAME'])
 
-    @patch('gssapi.creds.Credentials')
+    @patch('gssapi.Credentials')
     @patch.dict(os.environ, {'KRB5CCNAME': '/tmp/my_cc'}, clear=True)
     def test_do_nothing_if_unnecessary_to_init(self, Credentials):
         with krbContext(using_keytab=True,
