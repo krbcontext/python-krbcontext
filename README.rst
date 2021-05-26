@@ -46,17 +46,6 @@ done by specifying option ``-s`` to ``git commit``, for example::
 The sign-off means you have read and agree to `Developer Certificate of Origin`_.
 Nitrate uses version 1.1::
 
-   Developer Certificate of Origin
-   Version 1.1
-
-   Copyright (C) 2004, 2006 The Linux Foundation and its contributors.
-   1 Letterman Drive
-   Suite D4700
-   San Francisco, CA, 94129
-
-   Everyone is permitted to copy and distribute verbatim copies of this
-   license document, but changing it is not allowed.
-
    Developer's Certificate of Origin 1.1
 
    By making a contribution to this project, I certify that:
