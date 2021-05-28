@@ -35,13 +35,15 @@ Dependencies
 Installation
 ------------
 
-Using `virtual environment`_ ::
+Inside a virtual environment::
 
-  virtualenv myproject
-  . myproject/bin/activate
-  pip install krbcontext
+    python3 -m venv myproject
+    . myproject/bin/activate
+    python3 -m pip install krbcontext
 
-.. _virtual environment: https://pypi.python.org/pypi/virtualenv/
+Or, get it from Fedora repositories::
+
+    dnf install python3-krbcontext
 
 Usage
 -----
@@ -72,7 +74,7 @@ As a regular user
 This is the most simplest way, which uses default values. It gets current
 effective user name, and get ticket and store it into default credential cache.
 
-You can specify specific prinicpal or cache file explicityly.
+You can specify specific prinicpal or cache file explicitly.
 
 ::
 
